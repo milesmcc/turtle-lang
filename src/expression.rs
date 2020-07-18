@@ -4,6 +4,7 @@ use std::sync::{Arc, Mutex};
 
 pub type Symbol = String;
 
+#[derive(Debug)]
 pub struct Environment<'a> {
     values: HashMap<Symbol, Arc<Mutex<Expression>>>,
     parent: Option<&'a Environment<'a>>,
@@ -95,6 +96,8 @@ impl Expression {
     pub fn eval(&self, env: &mut Environment) -> Self {
         use Value::*;
 
+        println!("evaluating: {}", self);
+
         match &self.value {
             List(vals) => {
                 // TODO: do as match on slice
@@ -183,6 +186,7 @@ impl Expression {
                             expression.eval(&mut exp_env)
                         }
                         Symbol(_) | List(_) => { // TODO: check if list is what we want here
+                            println!("evaluating list operator {}", operator);
                             let evaled_operator = operator.eval(&mut env.new_child());
                             // TODO: is there a cleaner way to do this? Yes, there is...
                             let mut new_list = vec![evaled_operator];
@@ -210,7 +214,7 @@ impl Expression {
             }
             True => Expression::new(Value::True),
             Symbol(sym) => match env.lookup(sym) {
-                Some(exp) => exp.eval(&mut env.new_child()),
+                Some(exp) => exp,
                 None => panic!("symbol `{}` is undefined", sym),
             },
             _ => panic!("cannot evaluate literal value `{}`", self),

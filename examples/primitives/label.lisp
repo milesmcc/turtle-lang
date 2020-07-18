@@ -6,17 +6,21 @@
 
 name
 
+
 (label subst 
     (lambda (x y z)
         (cond 
-            ((atom z)
+            (
+                (atom z)
                 (cond 
                     ((eq z y) x)
                     ('t z)
                 )
             )
-            ('t (cons (subst x y (car z))
-            (subst x y (cdr z))))
+            (
+                't
+                (cons (subst x y (car z)) (subst x y (cdr z)))
+            )
         )
     )
 )
