@@ -1,4 +1,4 @@
-use crate::expression::{Expression, ExpressionValue};
+use crate::expression::{Expression, Value};
 use pest::iterators::{Pair, Pairs};
 use pest::Parser;
 
@@ -15,32 +15,33 @@ pub fn parse(source: &str) -> Result<Vec<Expression>, pest::error::Error<Rule>> 
 
 fn build_expression(pair: Pair<Rule>) -> Expression {
     Expression::new(match pair.as_rule() {
-        Rule::list => ExpressionValue::List(
+        Rule::list => Value::List(
             pair.into_inner()
                 .map(|elem| build_expression(elem))
                 .collect(),
         ),
-        Rule::symbol => ExpressionValue::Symbol(String::from(pair.as_str())),
-        Rule::t => ExpressionValue::True,
+        Rule::symbol => Value::Symbol(String::from(pair.as_str())),
+        Rule::t => Value::True,
 
         // Builtins
-        Rule::quote => ExpressionValue::Quote,
-        Rule::atom => ExpressionValue::Atom,
-        Rule::eq => ExpressionValue::Eq,
-        Rule::car => ExpressionValue::Car,
-        Rule::cdr => ExpressionValue::Cdr,
-        Rule::cons => ExpressionValue::Cons,
-        Rule::cond => ExpressionValue::Cond,
+        Rule::quote => Value::Quote,
+        Rule::atom => Value::Atom,
+        Rule::eq => Value::Eq,
+        Rule::car => Value::Car,
+        Rule::cdr => Value::Cdr,
+        Rule::cons => Value::Cons,
+        Rule::cond => Value::Cond,
+        Rule::lambda => Value::Lambda,
 
         // Sugar
         Rule::quote_sugar => {
-            let mut elements = vec![Expression::new(ExpressionValue::Quote)];
+            let mut elements = vec![Expression::new(Value::Quote)];
             elements.append(
                 &mut pair.into_inner()
                     .map(|elem| build_expression(elem))
                     .collect(),
             );
-            ExpressionValue::List(elements)
+            Value::List(elements)
         }
 
         _ => todo!(

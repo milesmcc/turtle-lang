@@ -2,11 +2,11 @@ use std::fmt;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Expression {
-    value: ExpressionValue,
+    value: Value,
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub enum ExpressionValue {
+pub enum Value {
     List(Vec<Expression>),
     Number(f64),
     Text(String),
@@ -21,19 +21,22 @@ pub enum ExpressionValue {
     Cdr,
     Cons,
     Cond,
+
+    // Not-quite-as-axiomatic but nice-to-have operators
+    Lambda,
 }
 
 impl Expression {
-    pub fn new(value: ExpressionValue) -> Self {
+    pub fn new(value: Value) -> Self {
         Self { value: value }
     }
 
-    pub fn get_value(&self) -> &ExpressionValue {
+    pub fn get_value(&self) -> &Value {
         &self.value
     }
 
     pub fn eval(&self) -> Self {
-        use ExpressionValue::*;
+        use Value::*;
 
         match &self.value {
             List(vals) => {
@@ -44,8 +47,8 @@ impl Expression {
                     match operator.get_value() {
                         Quote => arguments[0].clone(),
                         Atom => match arguments[0].eval().get_value() {
-                            List(_) => Expression::new(ExpressionValue::List(vec![])),
-                            _ => Expression::new(ExpressionValue::True),
+                            List(_) => Expression::new(Value::List(vec![])),
+                            _ => Expression::new(Value::True),
                         },
                         Eq => {
                             let first = arguments[0].eval();
@@ -66,24 +69,24 @@ impl Expression {
                                     }
                                 }
                             })
-                        },
+                        }
                         Car => {
                             let mut list = arguments[0].eval();
                             match list.value {
                                 List(mut vals) => vals.remove(0),
-                                _ => panic!("car expects a list, got `{}`", list)
+                                _ => panic!("car expects a list, got `{}`", list),
                             }
-                        },
+                        }
                         Cdr => {
                             let list = arguments[0].eval();
                             match list.value {
                                 List(mut vals) => {
                                     vals.remove(0);
                                     Expression::new(List(vals))
-                                },
-                                _ => panic!("cdr expects a list, got `{}`", list)
+                                }
+                                _ => panic!("cdr expects a list, got `{}`", list),
                             }
-                        },
+                        }
                         Cons => {
                             let first = arguments[0].eval();
                             let list = arguments[1].eval();
@@ -91,25 +94,29 @@ impl Expression {
                                 List(mut vals) => {
                                     vals.insert(0, first);
                                     Expression::new(List(vals))
-                                },
-                                _ => panic!("cons expects a list, got `{}`", list)
+                                }
+                                _ => panic!("cons expects a list, got `{}`", list),
                             }
-                        },
+                        }
                         Cond => {
                             for argument in arguments {
                                 match &argument.value {
                                     List(elems) => {
-                                        let cond = elems.get(0).expect("cond must have a conditional");
-                                        let val = elems.get(1).expect("cond must have a value to eval");
-                                        if *cond.eval().get_value() == ExpressionValue::True {
+                                        let cond =
+                                            elems.get(0).expect("cond must have a conditional");
+                                        let val =
+                                            elems.get(1).expect("cond must have a value to eval");
+                                        if *cond.eval().get_value() == Value::True {
                                             return val.eval();
                                         }
-                                    },
-                                    _ => panic!("cond must be called on a list, got `{}`", argument),
+                                    }
+                                    _ => {
+                                        panic!("cond must be called on a list, got `{}`", argument)
+                                    }
                                 }
                             }
                             panic!("none of cond was true");
-                        },
+                        }
                         _ => unimplemented!("unimplemented operator `{:?}`", operator.get_value()),
                     }
                 } else {
@@ -127,9 +134,9 @@ impl fmt::Display for Expression {
     }
 }
 
-impl fmt::Display for ExpressionValue {
+impl fmt::Display for Value {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        use ExpressionValue::*;
+        use Value::*;
 
         match self {
             List(vals) => write!(

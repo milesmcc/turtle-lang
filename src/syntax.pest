@@ -16,8 +16,9 @@ car = { "car" }
 cdr = { "cdr" }
 cons = { "cons" }
 cond = { "cond" }
+lambda = {"lambda"}
 
-builtin = _{ quote | atom | eq | car | cdr | cons | cond }
+builtin = _{ quote | atom | eq | car | cdr | cons | cond | lambda }
 
 // Sugar
 quote_sugar = { "'" ~ expression}
