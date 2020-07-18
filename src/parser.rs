@@ -1,20 +1,20 @@
 use crate::expression::{Expression, Symbol, Value, Environment};
 use pest::iterators::{Pair};
-use std::sync::{Arc, Mutex};
+use std::sync::{Arc, RwLock};
 use pest::Parser;
 
 #[derive(Parser)]
 #[grammar = "syntax.pest"]
 pub struct SyntaxParser;
 
-pub fn parse<'a>(source: &str, env: Arc<Mutex<Environment<'a>>>) -> Result<Vec<Expression<'a>>, pest::error::Error<Rule>> {
+pub fn parse<'a>(source: &str, env: Arc<RwLock<Environment<'a>>>) -> Result<Vec<Expression<'a>>, pest::error::Error<Rule>> {
     match SyntaxParser::parse(Rule::expressions, source) {
         Ok(pairs) => Ok(pairs.map(|pair| build_expression(pair, env.clone())).collect()),
         Err(err) => Err(err),
     }
 }
 
-fn build_expression<'a>(pair: Pair<Rule>, env: Arc<Mutex<Environment<'a>>>) -> Expression<'a> {
+fn build_expression<'a>(pair: Pair<Rule>, env: Arc<RwLock<Environment<'a>>>) -> Expression<'a> {
     Expression::new(match pair.as_rule() {
         Rule::list => Value::List(
             pair.into_inner()

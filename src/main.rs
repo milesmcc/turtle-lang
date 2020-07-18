@@ -1,5 +1,5 @@
 use std::io::Read;
-use std::sync::{Arc, Mutex};
+use std::sync::{Arc, RwLock};
 
 extern crate pest;
 #[macro_use]
@@ -20,7 +20,7 @@ fn main() {
     let input_string = String::from_utf8_lossy(stdin.as_slice());
     println!("Running: {}", input_string);
     let env = expression::Environment::root();
-    match parser::parse(input_string.as_ref(), Arc::new(Mutex::new(env))) {
+    match parser::parse(input_string.as_ref(), Arc::new(RwLock::new(env))) {
         Ok(values) => {
             println!("parsed successfully");
             for value in &values {
