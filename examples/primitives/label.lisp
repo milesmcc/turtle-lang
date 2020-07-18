@@ -4,6 +4,8 @@
 
 (label name t)
 
+(label name hello)
+
 name
 
 

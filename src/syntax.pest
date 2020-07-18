@@ -4,8 +4,7 @@ COMMENT = _{ "/*" ~ (!"*/" ~ ANY)* ~ "*/" | ("//" | ";;" ) ~ (!NEWLINE ~ ANY)* ~
 // Primitives
 list = { "(" ~ expression* ~ ")" }
 symbol = @{ LETTER ~ (LETTER | NUMBER)* }
-t = @{ ("t" ~ !SYMBOL | "true") ~ !SYMBOL }
-primitive = _{ list | t | symbol }
+primitive = _{ list | symbol }
 
 // Builtin operators
 quote = { "quote" }

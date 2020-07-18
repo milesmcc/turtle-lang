@@ -27,7 +27,6 @@ fn main() {
             let mut env = expression::Environment::root();
             for value in &values {
                 println!("{} -> {}", value, value.eval(&mut env));
-                println!("current environment state: {:?}", env);
             }
         },
         Err(err) => eprintln!("{}", err),

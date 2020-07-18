@@ -1,4 +1,4 @@
-use crate::expression::{Expression, Value, Symbol};
+use crate::expression::{Expression, Symbol, Value};
 use pest::iterators::{Pair, Pairs};
 use pest::Parser;
 
@@ -20,8 +20,10 @@ fn build_expression(pair: Pair<Rule>) -> Expression {
                 .map(|elem| build_expression(elem))
                 .collect(),
         ),
-        Rule::symbol => Value::Symbol(String::from(pair.as_str())),
-        Rule::t => Value::True,
+        Rule::symbol => match pair.as_str() {
+            "t" | "true" => Value::True,
+            _ => Value::Symbol(String::from(pair.as_str())),
+        },
 
         // Builtins
         Rule::quote => Value::Quote,
@@ -34,12 +36,17 @@ fn build_expression(pair: Pair<Rule>) -> Expression {
         Rule::label => Value::Label,
         Rule::lambda => {
             let mut inner = pair.into_inner();
-            let symbol_expressions: Vec<Expression> = inner.next().expect("lambda must have symbols").into_inner().map(|pair| build_expression(pair)).collect();
+            let symbol_expressions: Vec<Expression> = inner
+                .next()
+                .expect("lambda must have symbols")
+                .into_inner()
+                .map(|pair| build_expression(pair))
+                .collect();
             let mut symbols: Vec<Symbol> = Vec::new();
             for exp in symbol_expressions {
                 match exp.into_value() {
                     Value::Symbol(sym) => symbols.push(sym),
-                    _ => panic!("cannot have lambda args that aren't symbols")
+                    _ => panic!("cannot have lambda args that aren't symbols"),
                 }
             }
             let expression = build_expression(inner.next().expect("lambda must have expression"));
@@ -47,13 +54,14 @@ fn build_expression(pair: Pair<Rule>) -> Expression {
                 params: symbols,
                 expression: Box::new(expression),
             }
-        },
+        }
 
         // Sugar
         Rule::quote_sugar => {
             let mut elements = vec![Expression::new(Value::Quote)];
             elements.append(
-                &mut pair.into_inner()
+                &mut pair
+                    .into_inner()
                     .map(|elem| build_expression(elem))
                     .collect(),
             );
