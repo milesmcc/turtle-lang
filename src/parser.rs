@@ -31,6 +31,7 @@ fn build_expression(pair: Pair<Rule>) -> Expression {
         Rule::cdr => Value::Cdr,
         Rule::cons => Value::Cons,
         Rule::cond => Value::Cond,
+        Rule::label => Value::Label,
         Rule::lambda => {
             let mut inner = pair.into_inner();
             let symbol_expressions: Vec<Expression> = inner.next().expect("lambda must have symbols").into_inner().map(|pair| build_expression(pair)).collect();

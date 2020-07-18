@@ -24,9 +24,9 @@ fn main() {
             for value in &values {
                 println!("turtle> {}", value);
             }
-            let env = expression::Environment::root();
+            let mut env = expression::Environment::root();
             for value in &values {
-                println!("{} -> {}", value, value.eval(env.new_child()));
+                println!("{} -> {}", value, value.eval(&mut env));
             }
         },
         Err(err) => eprintln!("{}", err),

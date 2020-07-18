@@ -5,7 +5,7 @@ COMMENT = _{ "/*" ~ (!"*/" ~ ANY)* ~ "*/" | ("//" | ";;" ) ~ (!NEWLINE ~ ANY)* ~
 list = { "(" ~ expression* ~ ")" }
 symbol = @{ LETTER ~ (LETTER | NUMBER)* }
 t = { "t" | "true" }
-primitive = _{list | symbol | t}
+primitive = _{list | t | symbol}
 
 // Builtin operators
 quote = { "quote" }
@@ -15,7 +15,8 @@ car = { "car" }
 cdr = { "cdr" }
 cons = { "cons" }
 cond = { "cond" }
-builtin = _{ quote | atom | eq | car | cdr | cons | cond }
+label = { "label" }
+builtin = _{ quote | atom | eq | car | cdr | cons | cond | label }
 
 // Functions
 
