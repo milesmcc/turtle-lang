@@ -222,6 +222,24 @@ impl Expression {
     }
 }
 
+impl<'a> fmt::Display for Environment<'a> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(
+            f,
+            "[values: {}]\n{}\n--- showing parent ---\n{}",
+            self.values.len(),
+            self.values
+                .iter()
+                .map(|(k, v)| format!("{} := {}", k, v.lock().expect("cannot get key value")))
+                .collect::<Vec<String>>()
+                .join("\n"),
+            match self.parent {
+                Some(parent) => format!("{}", parent),
+                None => format!("env has no parent"),
+            }
+        )
+    }
+}
 impl fmt::Display for Expression {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}", self.value)
