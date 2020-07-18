@@ -213,17 +213,14 @@ impl<'a> Expression<'a> {
                         }
                         Function {
                             params,
-                            mut expression,
+                            expression,
                         } => {
-                            {
-                                let mut exp_env = expression.get_env_mut();
-                                // TODO: will ^this have bad side effects?
-                                for (symbol, exp) in params.iter().zip(arguments.iter()) {
-                                    // TODO: is there a way to get `exp` without cloning?
-                                    exp_env.assign(symbol.clone(), exp.clone());
-                                }
+                            let exp_env = expression.get_env().new_child();
+                            for (symbol, arg_expr) in params.iter().zip(arguments.iter()) {
+                                exp_env.write().unwrap().assign(symbol.clone(), arg_expr.eval());
                             }
-                            expression.eval()
+                            let new_value = expression.get_value().clone();
+                            Expression::new(new_value, exp_env).eval()
                         }
                         Label => {
                             // TODO: cleanup
