@@ -6,7 +6,7 @@ pub type Symbol = String;
 
 #[derive(Debug)]
 pub struct Environment<'a> {
-    values: HashMap<Symbol, Arc<Mutex<Expression<'a>>>>,
+    values: HashMap<Symbol, Expression<'a>>,
     parent: Option<&'a Environment<'a>>,
 }
 
@@ -34,10 +34,7 @@ impl<'a> Environment<'a> {
     pub fn lookup(&self, symbol: &Symbol) -> Option<Expression<'a>> {
         match self.values.get(symbol) {
             Some(val) => Some(
-                val.clone()
-                    .lock()
-                    .expect("could not get expression")
-                    .clone(),
+                val.clone(),
             ),
             None => match self.parent {
                 Some(parent) => parent.lookup(symbol),
@@ -46,7 +43,7 @@ impl<'a> Environment<'a> {
         }
     }
 
-    pub fn assign(&mut self, symbol: Symbol, exp: Arc<Mutex<Expression<'a>>>) {
+    pub fn assign(&mut self, symbol: Symbol, exp: Expression<'a>) {
         self.values.insert(symbol, exp);
     }
 }
@@ -219,7 +216,7 @@ impl<'a> Expression<'a> {
                             // TODO: will ^this have bad side effects?
                             for (symbol, exp) in params.iter().zip(arguments.iter()) {
                                 // TODO: is there a way to get `exp` without cloning?
-                                exp_env.assign(symbol.clone(), Arc::new(Mutex::new(exp.clone())));
+                                exp_env.assign(symbol.clone(), exp.clone());
                             }
                             expression.eval()
                         }
@@ -243,7 +240,7 @@ impl<'a> Expression<'a> {
                                 )
                                 .clone();
                             self.get_env()
-                                .assign(symbol.clone(), Arc::new(Mutex::new(expr)));
+                                .assign(symbol.clone(), expr);
                             Expression::nil()
                         }
                         List(_) | Symbol(_) => {
@@ -284,7 +281,7 @@ impl<'a> fmt::Display for Environment<'a> {
             self.values.len(),
             self.values
                 .iter()
-                .map(|(k, v)| format!("{} := {}", k, v.lock().expect("cannot get key value")))
+                .map(|(k, v)| format!("{} := {}", k, v))
                 .collect::<Vec<String>>()
                 .join("\n"),
             match self.parent {
