@@ -1,4 +1,5 @@
 use std::io::Read;
+use std::sync::{Arc, Mutex};
 
 extern crate pest;
 #[macro_use]
@@ -18,15 +19,15 @@ fn main() {
     };
     let input_string = String::from_utf8_lossy(stdin.as_slice());
     println!("Running: {}", input_string);
-    match parser::parse(input_string.as_ref()) {
+    let env = expression::Environment::root();
+    match parser::parse(input_string.as_ref(), Arc::new(Mutex::new(env))) {
         Ok(values) => {
             println!("parsed successfully");
             for value in &values {
                 println!("turtle> {}", value);
             }
-            let mut env = expression::Environment::root();
             for value in &values {
-                println!("{} -> {}", value, value.eval(&mut env));
+                println!("{} -> {}", value, value.eval());
             }
         },
         Err(err) => eprintln!("{}", err),

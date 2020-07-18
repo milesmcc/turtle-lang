@@ -1,23 +1,24 @@
-use crate::expression::{Expression, Symbol, Value};
-use pest::iterators::{Pair, Pairs};
+use crate::expression::{Expression, Symbol, Value, Environment};
+use pest::iterators::{Pair};
+use std::sync::{Arc, Mutex};
 use pest::Parser;
 
 #[derive(Parser)]
 #[grammar = "syntax.pest"]
 pub struct SyntaxParser;
 
-pub fn parse(source: &str) -> Result<Vec<Expression>, pest::error::Error<Rule>> {
+pub fn parse<'a>(source: &str, env: Arc<Mutex<Environment<'a>>>) -> Result<Vec<Expression<'a>>, pest::error::Error<Rule>> {
     match SyntaxParser::parse(Rule::expressions, source) {
-        Ok(pairs) => Ok(pairs.map(|pair| build_expression(pair)).collect()),
+        Ok(pairs) => Ok(pairs.map(|pair| build_expression(pair, env.clone())).collect()),
         Err(err) => Err(err),
     }
 }
 
-fn build_expression(pair: Pair<Rule>) -> Expression {
+fn build_expression<'a>(pair: Pair<Rule>, env: Arc<Mutex<Environment<'a>>>) -> Expression<'a> {
     Expression::new(match pair.as_rule() {
         Rule::list => Value::List(
             pair.into_inner()
-                .map(|elem| build_expression(elem))
+                .map(|elem| build_expression(elem, env.clone()))
                 .collect(),
         ),
         Rule::symbol => match pair.as_str() {
@@ -40,7 +41,7 @@ fn build_expression(pair: Pair<Rule>) -> Expression {
                 .next()
                 .expect("lambda must have symbols")
                 .into_inner()
-                .map(|pair| build_expression(pair))
+                .map(|pair| build_expression(pair, env.clone()))
                 .collect();
             let mut symbols: Vec<Symbol> = Vec::new();
             for exp in symbol_expressions {
@@ -49,7 +50,7 @@ fn build_expression(pair: Pair<Rule>) -> Expression {
                     _ => panic!("cannot have lambda args that aren't symbols"),
                 }
             }
-            let expression = build_expression(inner.next().expect("lambda must have expression"));
+            let expression = build_expression(inner.next().expect("lambda must have expression"), env.clone());
             Value::Function {
                 params: symbols,
                 expression: Box::new(expression),
@@ -58,11 +59,11 @@ fn build_expression(pair: Pair<Rule>) -> Expression {
 
         // Sugar
         Rule::quote_sugar => {
-            let mut elements = vec![Expression::new(Value::Quote)];
+            let mut elements = vec![Expression::new(Value::Quote, env.clone())];
             elements.append(
                 &mut pair
                     .into_inner()
-                    .map(|elem| build_expression(elem))
+                    .map(|elem| build_expression(elem, env.clone()))
                     .collect(),
             );
             Value::List(elements)
@@ -73,5 +74,5 @@ fn build_expression(pair: Pair<Rule>) -> Expression {
             pair.as_str(),
             pair.as_rule()
         ),
-    })
+    }, env)
 }

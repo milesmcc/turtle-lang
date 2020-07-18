@@ -1,5 +1,4 @@
-a
 (quote a)
 'a
-(quote a b c)
+(quote a)
 (quote '(a b c))
