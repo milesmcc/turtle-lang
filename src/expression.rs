@@ -7,6 +7,7 @@ pub type Symbol = String;
 #[derive(Debug)]
 pub struct Environment<'a> {
     values: HashMap<Symbol, Expression<'a>>,
+    // This unreadable memory model might cause issues going forward
     parent: Option<&'a Environment<'a>>,
 }
 
@@ -27,7 +28,7 @@ impl<'a> Environment<'a> {
         }
     }
 
-    pub fn new_child(&'a self) -> Arc<RwLock<Self>> {
+    pub fn new_child(&'a self) -> Arc<RwLock<Environment<'a>>> {
         Arc::new(RwLock::new(Self::with_parent(self)))
     }
 
@@ -106,42 +107,42 @@ impl<'a> Expression<'a> {
         self.value
     }
 
-    pub fn eval(&self) -> Self {
+    pub fn eval(&mut self) -> Self {
         use Value::*;
 
-        let mut exp = self.clone();
+        // let mut exp = self.clone();
 
-        println!("evaluating: {}", exp);
+        println!("evaluating: {}", self);
         println!(
             "environment ======================\n{}\n===========================================",
-            exp.get_env()
+            self.get_env()
         );
 
-        match &exp.value {
+        match &self.value {
             List(vals) => {
                 // TODO: do as match on slice
                 if vals.len() > 0 {
-                    let operator = vals
+                    let mut operator = vals
                         .get(0)
                         .expect("list must have operator (this should never happen)")
                         .clone();
-                    let arguments: Vec<Expression<'a>> = vals.iter().skip(1).cloned().collect();
-                    match operator.value.clone() {
+                    let mut arguments: Vec<Expression<'a>> = vals.iter().skip(1).cloned().collect();
+                    match operator.value {
                         Quote => arguments
                             .get(0)
                             .expect("quote requires one argument")
                             .clone(),
-                        Atom => match arguments.get(0).unwrap().eval().into_value() {
-                            List(_) => Expression::new(Value::List(vec![]), exp.env.clone()),
-                            _ => Expression::new(Value::True, exp.env.clone()),
+                        Atom => match arguments.get_mut(0).expect("atom requires one argument").value {
+                            List(_) => Expression::new(Value::List(vec![]), self.env.clone()),
+                            _ => Expression::new(Value::True, self.env.clone()),
                         },
                         Eq => {
                             let first = arguments
-                                .get(0)
+                                .get_mut(0)
                                 .expect("eq requires a first argument")
                                 .eval();
                             let second = arguments
-                                .get(1)
+                                .get_mut(1)
                                 .expect("eq requires a second argument")
                                 .eval();
                             Expression::new(
@@ -161,22 +162,28 @@ impl<'a> Expression<'a> {
                                         }
                                     }
                                 },
-                                exp.env.clone(),
+                                self.env.clone(),
                             )
                         }
                         Car => {
-                            let list = arguments.get(0).expect("car requires an argument").eval();
+                            let list = arguments
+                                .get_mut(0)
+                                .expect("car requires an argument")
+                                .eval();
                             match list.value {
                                 List(mut vals) => vals.remove(0),
                                 _ => panic!("car expects a list, got `{}`", list),
                             }
                         }
                         Cdr => {
-                            let list = arguments.get(0).expect("cdr requires an argument").eval();
+                            let list = arguments
+                                .get_mut(0)
+                                .expect("cdr requires an argument")
+                                .eval();
                             match list.value {
                                 List(mut vals) => {
                                     vals.remove(0);
-                                    Expression::new(List(vals), exp.env.clone())
+                                    Expression::new(List(vals), self.env.clone())
                                 }
                                 _ => panic!("cdr expects a list, got `{}`", list),
                             }
@@ -187,20 +194,24 @@ impl<'a> Expression<'a> {
                             match list.value {
                                 List(mut vals) => {
                                     vals.insert(0, first);
-                                    Expression::new(List(vals), exp.env.clone())
+                                    Expression::new(List(vals), self.env.clone())
                                 }
                                 _ => panic!("cons expects a list, got `{}`", list),
                             }
                         }
                         Cond => {
                             for argument in arguments {
-                                match &argument.value {
-                                    List(elems) => {
-                                        let cond =
-                                            elems.get(0).expect("cond must have a conditional");
-                                        let val =
-                                            elems.get(1).expect("cond must have a value to eval");
+                                match argument.value {
+                                    List(mut elems) => {
+                                        let cond = {
+                                            elems.get_mut(0).expect("cond must have a conditional")
+                                        };
                                         if cond.eval().into_value() == Value::True {
+                                            let val = {
+                                                elems
+                                                    .get_mut(1)
+                                                    .expect("cond must have a value to eval")
+                                            };
                                             return val.eval();
                                         }
                                     }
@@ -211,16 +222,12 @@ impl<'a> Expression<'a> {
                             }
                             panic!("none of cond was true");
                         }
-                        Function {
-                            params,
-                            expression,
-                        } => {
-                            let exp_env = expression.get_env().new_child();
+                        Function { params, mut expression } => {
                             for (symbol, arg_expr) in params.iter().zip(arguments.iter()) {
-                                exp_env.write().unwrap().assign(symbol.clone(), arg_expr.eval());
+                                expression.get_env_mut()
+                                    .assign(symbol.clone(), arg_expr.clone().eval());
                             }
-                            let new_value = expression.get_value().clone();
-                            Expression::new(new_value, exp_env).eval()
+                            expression.eval()
                         }
                         Label => {
                             // TODO: cleanup
@@ -241,7 +248,7 @@ impl<'a> Expression<'a> {
                                     "label requires a second argument for the assigned expression",
                                 )
                                 .clone();
-                            exp.get_env_mut().assign(symbol.clone(), expr);
+                            self.get_env_mut().assign(symbol.clone(), expr);
                             Expression::nil()
                         }
                         List(_) | Symbol(_) => {
@@ -252,7 +259,7 @@ impl<'a> Expression<'a> {
                             for arg in arguments {
                                 new_list.push(arg); // TODO: clone?
                             }
-                            Expression::new(Value::List(new_list), exp.env.clone()).eval()
+                            Expression::new(Value::List(new_list), self.env.clone()).eval()
                         }
                         val => unimplemented!("unimplemented operator `{:?}`", val),
                     }
@@ -260,12 +267,12 @@ impl<'a> Expression<'a> {
                     panic!("cannot evaluate an empty list!");
                 }
             }
-            True => Expression::new(Value::True, exp.env.clone()),
-            Symbol(sym) => match exp.get_env().lookup(&sym) {
+            True => Expression::new(Value::True, self.env.clone()),
+            Symbol(sym) => match self.get_env().lookup(&sym) {
                 Some(exp) => exp,
                 None => panic!("symbol `{}` is undefined", sym),
             },
-            _ => panic!("cannot evaluate literal value `{}`", exp),
+            _ => panic!("cannot evaluate literal value `{}`", self),
         }
     }
 

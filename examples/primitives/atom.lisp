@@ -2,4 +2,4 @@
 (atom 'a)
 (atom ())
 (atom '())
-(atom)
+(atom atom)

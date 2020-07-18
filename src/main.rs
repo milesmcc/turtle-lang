@@ -21,13 +21,13 @@ fn main() {
     println!("Running: {}", input_string);
     let env = expression::Environment::root();
     match parser::parse(input_string.as_ref(), Arc::new(RwLock::new(env))) {
-        Ok(values) => {
+        Ok(mut values) => {
             println!("parsed successfully");
             for value in &values {
                 println!("turtle> {}", value);
             }
-            for value in &values {
-                println!("{} -> {}", value, value.eval());
+            for value in &mut values {
+                println!("{} -> {}", value.clone(), value.eval());
             }
         },
         Err(err) => eprintln!("{}", err),
