@@ -1,0 +1,5 @@
+(atom a)
+(atom 'a)
+(atom ())
+(atom '())
+(atom)

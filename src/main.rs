@@ -19,8 +19,11 @@ fn main() {
     let input_string = String::from_utf8_lossy(stdin.as_slice());
     println!("Running: {}", input_string);
     match parser::parse(input_string.as_ref()) {
-        Ok(value) => {
-            println!("parsed successfully: {:?}", value);
+        Ok(values) => {
+            println!("parsed successfully: {:?}", values);
+            for value in values {
+                println!("{} -> {}", value, value.eval());
+            }
         },
         Err(err) => eprintln!("{}", err),
     }

@@ -1,4 +1,4 @@
-use crate::expression::{ExpressionValue, Expression};
+use crate::expression::{Expression, ExpressionValue};
 use pest::iterators::{Pair, Pairs};
 use pest::Parser;
 
@@ -21,6 +21,7 @@ fn build_expression(pair: Pair<Rule>) -> Expression {
                 .collect(),
         ),
         Rule::symbol => ExpressionValue::Symbol(String::from(pair.as_str())),
+        Rule::t => ExpressionValue::True,
 
         // Builtins
         Rule::quote => ExpressionValue::Quote,
@@ -30,7 +31,22 @@ fn build_expression(pair: Pair<Rule>) -> Expression {
         Rule::cdr => ExpressionValue::Cdr,
         Rule::cons => ExpressionValue::Cons,
         Rule::cond => ExpressionValue::Cond,
-        
-        _ => todo!("unknown syntax element `{}` ({:?})", pair.as_str(), pair.as_rule()),
+
+        // Sugar
+        Rule::quote_sugar => {
+            let mut elements = vec![Expression::new(ExpressionValue::Quote)];
+            elements.append(
+                &mut pair.into_inner()
+                    .map(|elem| build_expression(elem))
+                    .collect(),
+            );
+            ExpressionValue::List(elements)
+        }
+
+        _ => todo!(
+            "unknown syntax element `{}` ({:?})",
+            pair.as_str(),
+            pair.as_rule()
+        ),
     })
 }

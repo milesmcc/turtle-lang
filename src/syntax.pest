@@ -1,11 +1,15 @@
 WHITESPACE = _{ " "+ | "\t"+ | NEWLINE+ }
 COMMENT = _{ "/*" ~ (!"*/" ~ ANY)* ~ "*/" | ("//" | ";;" ) ~ (!NEWLINE ~ ANY)* ~ NEWLINE }
 
+// Primitives
 list = { "(" ~ expression* ~ ")" }
 symbol = @{ LETTER ~ (LETTER | NUMBER)* }
+t = { "t" | "true" }
 
-// Builtins
-quote = { "quote" | "'" }
+primitive = _{list | symbol | t}
+
+// Builtin operators
+quote = { "quote" }
 atom = { "atom" }
 eq = { "eq" }
 car = { "car" }
@@ -15,6 +19,11 @@ cond = { "cond" }
 
 builtin = _{ quote | atom | eq | car | cdr | cons | cond }
 
-expression = _{ list | builtin | symbol }
+// Sugar
+quote_sugar = { "'" ~ expression}
+
+sugar = _{ quote_sugar }
+
+expression = _{ sugar | builtin | primitive }
 
 expressions = _{ expression+ }
