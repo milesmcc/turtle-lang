@@ -132,7 +132,7 @@ impl<'a> Expression<'a> {
                             .get(0)
                             .expect("quote requires one argument")
                             .clone(),
-                        Atom => match arguments.get_mut(0).expect("atom requires one argument").value {
+                        Atom => match arguments.get_mut(0).expect("atom requires one argument").eval().into_value() {
                             List(_) => Expression::new(Value::List(vec![]), self.env.clone()),
                             _ => Expression::new(Value::True, self.env.clone()),
                         },
