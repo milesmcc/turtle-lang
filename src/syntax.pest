@@ -1,0 +1,20 @@
+WHITESPACE = _{ " "+ | "\t"+ | NEWLINE+ }
+COMMENT = _{ "/*" ~ (!"*/" ~ ANY)* ~ "*/" | ("//" | ";;" ) ~ (!NEWLINE ~ ANY)* ~ NEWLINE }
+
+list = { "(" ~ expression* ~ ")" }
+symbol = @{ LETTER ~ (LETTER | NUMBER)* }
+
+// Builtins
+quote = { "quote" | "'" }
+atom = { "atom" }
+eq = { "eq" }
+car = { "car" }
+cdr = { "cdr" }
+cons = { "cons" }
+cond = { "cond" }
+
+builtin = _{ quote | atom | eq | car | cdr | cons | cond }
+
+expression = _{ list | builtin | symbol }
+
+expressions = _{ expression+ }
