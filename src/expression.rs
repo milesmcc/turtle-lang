@@ -33,9 +33,7 @@ impl<'a> Environment<'a> {
 
     pub fn lookup(&self, symbol: &Symbol) -> Option<Expression<'a>> {
         match self.values.get(symbol) {
-            Some(val) => Some(
-                val.clone(),
-            ),
+            Some(val) => Some(val.clone()),
             None => match self.parent {
                 Some(parent) => parent.lookup(symbol),
                 None => None,
@@ -125,7 +123,8 @@ impl<'a> Expression<'a> {
                 if vals.len() > 0 {
                     let operator = vals
                         .get(0)
-                        .expect("list must have operator (this should never happen)").clone();
+                        .expect("list must have operator (this should never happen)")
+                        .clone();
                     let arguments: Vec<Expression<'a>> = vals.iter().skip(1).cloned().collect();
                     match operator.value.clone() {
                         Quote => arguments
@@ -166,8 +165,7 @@ impl<'a> Expression<'a> {
                             )
                         }
                         Car => {
-                            let list =
-                                arguments.get(0).expect("car requires an argument").eval();
+                            let list = arguments.get(0).expect("car requires an argument").eval();
                             match list.value {
                                 List(mut vals) => vals.remove(0),
                                 _ => panic!("car expects a list, got `{}`", list),
@@ -213,8 +211,11 @@ impl<'a> Expression<'a> {
                             }
                             panic!("none of cond was true");
                         }
-                        Function { params, mut expression } => {
-                            { 
+                        Function {
+                            params,
+                            mut expression,
+                        } => {
+                            {
                                 let mut exp_env = expression.get_env_mut();
                                 // TODO: will ^this have bad side effects?
                                 for (symbol, exp) in params.iter().zip(arguments.iter()) {
@@ -243,8 +244,7 @@ impl<'a> Expression<'a> {
                                     "label requires a second argument for the assigned expression",
                                 )
                                 .clone();
-                            exp.get_env_mut()
-                                .assign(symbol.clone(), expr);
+                            exp.get_env_mut().assign(symbol.clone(), expr);
                             Expression::nil()
                         }
                         List(_) | Symbol(_) => {
@@ -277,7 +277,9 @@ impl<'a> Expression<'a> {
     }
 
     fn get_env_mut(&mut self) -> RwLockWriteGuard<Environment<'a>> {
-        self.env.write().expect("unable to mutably access environment")
+        self.env
+            .write()
+            .expect("unable to mutably access environment")
     }
 }
 
