@@ -20,9 +20,13 @@ fn main() {
     println!("Running: {}", input_string);
     match parser::parse(input_string.as_ref()) {
         Ok(values) => {
-            println!("parsed successfully: {:?}", values);
-            for value in values {
-                println!("{} -> {}", value, value.eval());
+            println!("parsed successfully");
+            for value in &values {
+                println!("turtle> {}", value);
+            }
+            let env = expression::Environment::root();
+            for value in &values {
+                println!("{} -> {}", value, value.eval(env.new_child()));
             }
         },
         Err(err) => eprintln!("{}", err),

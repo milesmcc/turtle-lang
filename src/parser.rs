@@ -1,4 +1,4 @@
-use crate::expression::{Expression, Value};
+use crate::expression::{Expression, Value, Symbol};
 use pest::iterators::{Pair, Pairs};
 use pest::Parser;
 
@@ -31,7 +31,22 @@ fn build_expression(pair: Pair<Rule>) -> Expression {
         Rule::cdr => Value::Cdr,
         Rule::cons => Value::Cons,
         Rule::cond => Value::Cond,
-        Rule::lambda => Value::Lambda,
+        Rule::lambda => {
+            let mut inner = pair.into_inner();
+            let symbol_expressions: Vec<Expression> = inner.next().expect("lambda must have symbols").into_inner().map(|pair| build_expression(pair)).collect();
+            let mut symbols: Vec<Symbol> = Vec::new();
+            for exp in symbol_expressions {
+                match exp.into_value() {
+                    Value::Symbol(sym) => symbols.push(sym),
+                    _ => panic!("cannot have lambda args that aren't symbols")
+                }
+            }
+            let expression = build_expression(inner.next().expect("lambda must have expression"));
+            Value::Function {
+                params: symbols,
+                expression: Box::new(expression),
+            }
+        },
 
         // Sugar
         Rule::quote_sugar => {

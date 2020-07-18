@@ -1,4 +1,54 @@
+use std::collections::HashMap;
 use std::fmt;
+use std::sync::{Arc, Mutex};
+
+pub type Symbol = String;
+
+pub struct Environment<'a> {
+    values: HashMap<Symbol, Arc<Mutex<Expression>>>,
+    parent: Option<&'a Environment<'a>>,
+}
+
+impl<'a> Environment<'a> {
+    // TODO: see if this can be done without mutexes, at least for values
+
+    pub fn root() -> Self {
+        Self {
+            values: HashMap::new(),
+            parent: None,
+        }
+    }
+
+    pub fn with_parent(parent: &'a Self) -> Self {
+        Self {
+            values: HashMap::new(),
+            parent: Some(parent),
+        }
+    }
+
+    pub fn new_child(&'a self) -> Self {
+        Self::with_parent(self)
+    }
+
+    pub fn lookup(&self, symbol: &Symbol) -> Option<Expression> {
+        match self.values.get(symbol) {
+            Some(val) => Some(
+                val.clone()
+                    .lock()
+                    .expect("could not get expression")
+                    .clone(),
+            ),
+            None => match self.parent {
+                Some(parent) => parent.lookup(symbol),
+                None => None,
+            },
+        }
+    }
+
+    pub fn assign(&mut self, symbol: Symbol, exp: Arc<Mutex<Expression>>) {
+        self.values.insert(symbol, exp);
+    }
+}
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Expression {
@@ -10,7 +60,7 @@ pub enum Value {
     List(Vec<Expression>),
     Number(f64),
     Text(String),
-    Symbol(String),
+    Symbol(Symbol),
     True,
 
     // Primitive (axiomatic) operators
@@ -22,8 +72,10 @@ pub enum Value {
     Cons,
     Cond,
 
-    // Not-quite-as-axiomatic but nice-to-have operators
-    Lambda,
+    Function {
+        params: Vec<Symbol>,
+        expression: Box<Expression>,
+    },
 }
 
 impl Expression {
@@ -35,7 +87,11 @@ impl Expression {
         &self.value
     }
 
-    pub fn eval(&self) -> Self {
+    pub fn into_value(self) -> Value {
+        self.value
+    }
+
+    pub fn eval(&self, env: Environment) -> Self {
         use Value::*;
 
         match &self.value {
@@ -46,13 +102,13 @@ impl Expression {
                     let arguments = &vals.as_slice()[1..];
                     match operator.get_value() {
                         Quote => arguments[0].clone(),
-                        Atom => match arguments[0].eval().get_value() {
+                        Atom => match arguments[0].eval(env.new_child()).get_value() {
                             List(_) => Expression::new(Value::List(vec![])),
                             _ => Expression::new(Value::True),
                         },
                         Eq => {
-                            let first = arguments[0].eval();
-                            let second = arguments[1].eval();
+                            let first = arguments[0].eval(env.new_child());
+                            let second = arguments[1].eval(env.new_child());
                             Expression::new(match (first.get_value(), second.get_value()) {
                                 (List(l1), List(l2)) => {
                                     if l1.len() == 0 && l2.len() == 0 {
@@ -71,14 +127,14 @@ impl Expression {
                             })
                         }
                         Car => {
-                            let mut list = arguments[0].eval();
+                            let mut list = arguments[0].eval(env.new_child());
                             match list.value {
                                 List(mut vals) => vals.remove(0),
                                 _ => panic!("car expects a list, got `{}`", list),
                             }
                         }
                         Cdr => {
-                            let list = arguments[0].eval();
+                            let list = arguments[0].eval(env.new_child());
                             match list.value {
                                 List(mut vals) => {
                                     vals.remove(0);
@@ -88,8 +144,8 @@ impl Expression {
                             }
                         }
                         Cons => {
-                            let first = arguments[0].eval();
-                            let list = arguments[1].eval();
+                            let first = arguments[0].eval(env.new_child());
+                            let list = arguments[1].eval(env.new_child());
                             match list.value {
                                 List(mut vals) => {
                                     vals.insert(0, first);
@@ -106,8 +162,8 @@ impl Expression {
                                             elems.get(0).expect("cond must have a conditional");
                                         let val =
                                             elems.get(1).expect("cond must have a value to eval");
-                                        if *cond.eval().get_value() == Value::True {
-                                            return val.eval();
+                                        if *cond.eval(env.new_child()).get_value() == Value::True {
+                                            return val.eval(env.new_child());
                                         }
                                     }
                                     _ => {
@@ -117,12 +173,31 @@ impl Expression {
                             }
                             panic!("none of cond was true");
                         }
+                        Function { params, expression } => {
+                            let mut exp_env = env.new_child();
+                            for (symbol, exp) in params.iter().zip(arguments.iter()) {
+                                // TODO: is there a way to get `exp` without cloning?
+                                exp_env.assign(symbol.clone(), Arc::new(Mutex::new(exp.clone())));
+                            }
+                            expression.eval(exp_env)
+                        }
+                        Symbol(_) => {
+                            let evaled_operator = operator.eval(env.new_child());
+                            // TODO: is there a cleaner way to do this? Yes, there is...
+                            let mut new_list = vec![evaled_operator];
+                            new_list.append(&mut Vec::from(arguments));
+                            Expression::new(Value::List(new_list)).eval(env.new_child())
+                        }
                         _ => unimplemented!("unimplemented operator `{:?}`", operator.get_value()),
                     }
                 } else {
-                    panic!("cannot evaluate empty list!");
+                    panic!("cannot evaluate an empty list!");
                 }
             }
+            Symbol(sym) => match env.lookup(sym) {
+                Some(exp) => exp.eval(env.new_child()),
+                None => panic!("symbol `{}` is undefined", sym),
+            },
             _ => panic!("cannot evaluate literal value `{}`", self),
         }
     }
@@ -151,6 +226,16 @@ impl fmt::Display for Value {
             Text(val) => write!(f, "\"{}\"", val),
             Symbol(val) => write!(f, "{}", val),
             True => write!(f, "t"),
+            Function { params, expression } => write!(
+                f,
+                "(lambda ({}) {})",
+                params
+                    .iter()
+                    .map(|x| format!("{}", x))
+                    .collect::<Vec<String>>()
+                    .join(" "),
+                expression
+            ),
             _ => write!(f, "{}", format!("{:?}", self).to_lowercase()),
         }
     }
