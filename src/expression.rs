@@ -107,7 +107,6 @@ impl<'a> Expression<'a> {
     }
 
     pub fn eval(&mut self) -> Self {
-        use self::Operator::*;
         use Value::*;
 
         match &self.value {
@@ -119,218 +118,7 @@ impl<'a> Expression<'a> {
                         .clone();
                     let mut arguments: Vec<Expression<'a>> = vals.iter().skip(1).cloned().collect();
                     match operator.value {
-                        Operator(operand) =>    {
-                            match operand {
-                            Quote => arguments
-                            .get(0)
-                            .expect("quote requires one argument")
-                            .clone(),
-                        Atom => match arguments
-                            .get_mut(0)
-                            .expect("atom requires one argument")
-                            .eval()
-                            .into_value()
-                        {
-                            List(_) => Expression::new(Value::List(vec![]), self.env.clone()),
-                            _ => Expression::new(Value::True, self.env.clone()),
-                        },
-                        Eq => {
-                            let first = arguments
-                                .get_mut(0)
-                                .expect("eq requires a first argument")
-                                .eval();
-                            let second = arguments
-                                .get_mut(1)
-                                .expect("eq requires a second argument")
-                                .eval();
-                            match (first.into_value(), second.into_value()) {
-                                (List(l1), List(l2)) => {
-                                    if l1.len() == 0 && l2.len() == 0 {
-                                        Expression::t()
-                                    } else {
-                                        Expression::nil()
-                                    }
-                                }
-                                (v1, v2) => {
-                                    if v1 == v2 {
-                                        Expression::t()
-                                    } else {
-                                        Expression::nil()
-                                    }
-                                }
-                            }
-                        }
-                        Car => {
-                            let list = arguments
-                                .get_mut(0)
-                                .expect("car requires an argument")
-                                .eval();
-                            match list.value {
-                                List(mut vals) => vals.remove(0),
-                                _ => panic!("car expects a list, got `{}`", list),
-                            }
-                        }
-                        Cdr => {
-                            let list = arguments
-                                .get_mut(0)
-                                .expect("cdr requires an argument")
-                                .eval();
-                            match list.value {
-                                List(mut vals) => {
-                                    if vals.len() > 0 {
-                                        vals.remove(0);
-                                    }
-                                    Expression::new(List(vals), self.env.clone())
-                                }
-                                _ => panic!("cdr expects a list, got `{}`", list),
-                            }
-                        }
-                        Cons => {
-                            let first = arguments[0].eval();
-                            let list = arguments[1].eval();
-                            match list.value {
-                                List(mut vals) => {
-                                    vals.insert(0, first);
-                                    Expression::new(List(vals), self.env.clone())
-                                }
-                                _ => panic!(
-                                    "cons expects a list as its second argument, got `{}`",
-                                    list
-                                ),
-                            }
-                        }
-                        Cond => {
-                            for argument in arguments {
-                                match argument.value {
-                                    List(mut elems) => {
-                                        let cond = {
-                                            elems.get_mut(0).expect("cond must have a conditional")
-                                        };
-                                        if cond.eval().into_value() == Value::True {
-                                            let val = {
-                                                elems
-                                                    .get_mut(1)
-                                                    .expect("cond must have a value to eval")
-                                            };
-                                            return val.eval();
-                                        }
-                                    }
-                                    _ => {
-                                        panic!("cond must be called on a list, got `{}`", argument)
-                                    }
-                                }
-                            }
-                            panic!("none of cond was true");
-                        }
-                        Label => {
-                            let sym_exp = arguments
-                                .get(0)
-                                .expect("label requires an argument for the symbol")
-                                .clone()
-                                .eval();
-                            let symbol = match sym_exp.into_value() {
-                                Symbol(sym) => sym,
-                                _ => panic!(
-                                    "first arg of label must evaluate to a symbol (received `{}`)",
-                                    arguments.get(0).unwrap()
-                                ),
-                            };
-                            let expr = arguments
-                                .get(1)
-                                .expect(
-                                    "label requires a second argument for the assigned expression",
-                                )
-                                .clone()
-                                .eval();
-                            self.get_env_mut().assign(symbol.clone(), expr.clone());
-                            expr
-                        }
-                        Add => Expression::new(
-                            Value::Number(arguments.iter().fold(0.0, |acc, el| {
-                                match el.clone().eval().into_value() {
-                                    Number(val) => acc + val,
-                                    val => panic!(
-                                        "add expects numbers as its arguments (got `{}`)",
-                                        val
-                                    ),
-                                }
-                            })),
-                            self.env.clone(),
-                        ),
-                        Mult => Expression::new(
-                            Value::Number(arguments.iter().fold(1.0, |acc, el| {
-                                match el.clone().eval().into_value() {
-                                    Number(val) => acc * val,
-                                    val => panic!(
-                                        "mult expects numbers as its arguments (got `{}`)",
-                                        val
-                                    ),
-                                }
-                            })),
-                            self.env.clone(),
-                        ),
-                        Exp => Expression::new(
-                            Value::Number(
-                                match (
-                                    arguments
-                                        .get_mut(0)
-                                        .expect("exp requires a first argument")
-                                        .eval().into_value(),
-                                    arguments
-                                        .get_mut(1)
-                                        .expect("exp requires a second argument")
-                                        .eval().into_value(),
-                                ) {
-                                    (Number(base), Number(exp)) => base.powf(exp),
-                                    (base, exp) => panic!("exp requires its arguments to be both numerical (got `{}` and `{}`)", base, exp),
-                                },
-                            ),
-                            self.env.clone(),
-                        ),
-                        Modulo => Expression::new(
-                            Value::Number(
-                                match (
-                                    arguments
-                                        .get_mut(0)
-                                        .expect("modulo requires a first argument")
-                                        .eval().into_value(),
-                                    arguments
-                                        .get_mut(1)
-                                        .expect("modulo requires a second argument")
-                                        .eval().into_value(),
-                                ) {
-                                    (Number(base), Number(modu)) => base % modu,
-                                    (base, modu) => panic!("modulo requires its arguments to be both numerical (got `{}` and `{}`)", base, modu),
-                                },
-                            ),
-                            self.env.clone(),
-                        ),
-                        Gt => {
-                            let args_evaled = arguments.iter_mut().map(|arg| arg.eval().into_value()).collect::<Vec<Value<'a>>>();
-                            match args_evaled.iter().skip(1).zip(args_evaled.iter()).all(|(g, l)| g > l) {
-                                true => Expression::t(),
-                                false => Expression::nil(),
-                            }
-                        }
-                        Ge => {
-                            let args_evaled = arguments.iter_mut().map(|arg| arg.eval().into_value()).collect::<Vec<Value<'a>>>();
-                            match args_evaled.iter().skip(1).zip(args_evaled.iter()).all(|(g, l)| g >= l) {
-                                true => Expression::t(),
-                                false => Expression::nil(),
-                            }
-                        }
-                        Type => {
-                            let arg_type = arguments.get_mut(0).expect("type requires an argument").eval().into_value().as_type();
-                            Expression::new(arg_type, self.env.clone())
-                        }
-                        Disp => {
-                            for mut arg in arguments {
-                                print!("{}\n", arg.eval());
-                            }
-                            Expression::nil()
-                        }
-                    }
-                        }
+                        Operator(operand) => operand.apply(arguments, self),
                         List(_) | Symbol(_) => {
                             let evaled_operator = operator.eval();
                             let mut new_list = vec![evaled_operator];
@@ -358,7 +146,11 @@ impl<'a> Expression<'a> {
                             }
                             result
                         }
-                        val => unimplemented!("unimplemented operator `{}` in list `{}`", val, self.value),
+                        val => unimplemented!(
+                            "unimplemented operator `{}` in list `{}`",
+                            val,
+                            self.value
+                        ),
                     }
                 } else {
                     self.clone()
@@ -381,6 +173,228 @@ impl<'a> Expression<'a> {
         self.env
             .write()
             .expect("unable to mutably access environment")
+    }
+}
+
+impl<'a> Operator {
+    pub fn apply(
+        &self,
+        mut arguments: Vec<Expression<'a>>,
+        expr: &mut Expression<'a>,
+    ) -> Expression<'a> {
+        use crate::Operator::*;
+        use Value::*;
+
+        match self {
+            Quote => arguments
+                .get(0)
+                .expect("quote requires one argument")
+                .clone(),
+            Atom => match arguments
+                .get_mut(0)
+                .expect("atom requires one argument")
+                .eval()
+                .into_value()
+            {
+                List(_) => Expression::new(Value::List(vec![]), expr.env.clone()),
+                _ => Expression::new(Value::True, expr.env.clone()),
+            },
+            Eq => {
+                let first = arguments
+                    .get_mut(0)
+                    .expect("eq requires a first argument")
+                    .eval();
+                let second = arguments
+                    .get_mut(1)
+                    .expect("eq requires a second argument")
+                    .eval();
+                match (first.into_value(), second.into_value()) {
+                    (List(l1), List(l2)) => {
+                        if l1.len() == 0 && l2.len() == 0 {
+                            Expression::t()
+                        } else {
+                            Expression::nil()
+                        }
+                    }
+                    (v1, v2) => {
+                        if v1 == v2 {
+                            Expression::t()
+                        } else {
+                            Expression::nil()
+                        }
+                    }
+                }
+            }
+            Car => {
+                let list = arguments
+                    .get_mut(0)
+                    .expect("car requires an argument")
+                    .eval();
+                match list.value {
+                    List(mut vals) => vals.remove(0),
+                    _ => panic!("car expects a list, got `{}`", list),
+                }
+            }
+            Cdr => {
+                let list = arguments
+                    .get_mut(0)
+                    .expect("cdr requires an argument")
+                    .eval();
+                match list.value {
+                    List(mut vals) => {
+                        if vals.len() > 0 {
+                            vals.remove(0);
+                        }
+                        Expression::new(List(vals), expr.env.clone())
+                    }
+                    _ => panic!("cdr expects a list, got `{}`", list),
+                }
+            }
+            Cons => {
+                let first = arguments[0].eval();
+                let list = arguments[1].eval();
+                match list.value {
+                    List(mut vals) => {
+                        vals.insert(0, first);
+                        Expression::new(List(vals), expr.env.clone())
+                    }
+                    _ => panic!(
+                        "cons expects a list as its second argument, got `{}`",
+                        list
+                    ),
+                }
+            }
+            Cond => {
+                for argument in arguments {
+                    match argument.value {
+                        List(mut elems) => {
+                            let cond = {
+                                elems.get_mut(0).expect("cond must have a conditional")
+                            };
+                            if cond.eval().into_value() == Value::True {
+                                let val = {
+                                    elems
+                                        .get_mut(1)
+                                        .expect("cond must have a value to eval")
+                                };
+                                return val.eval();
+                            }
+                        }
+                        _ => {
+                            panic!("cond must be called on a list, got `{}`", argument)
+                        }
+                    }
+                }
+                panic!("none of cond was true");
+            }
+            Label => {
+                let sym_exp = arguments
+                    .get(0)
+                    .expect("label requires an argument for the symbol")
+                    .clone()
+                    .eval();
+                let symbol = match sym_exp.into_value() {
+                    Symbol(sym) => sym,
+                    _ => panic!(
+                        "first arg of label must evaluate to a symbol (received `{}`)",
+                        arguments.get(0).unwrap()
+                    ),
+                };
+                let assigned_expr = arguments
+                    .get(1)
+                    .expect(
+                        "label requires a second argument for the assigned expression",
+                    )
+                    .clone()
+                    .eval();
+                    expr.get_env_mut().assign(symbol.clone(), assigned_expr.clone());
+                    assigned_expr
+            }
+            Sum => Expression::new(
+                Value::Number(arguments.iter().fold(0.0, |acc, el| {
+                    match el.clone().eval().into_value() {
+                        Number(val) => acc + val,
+                        val => panic!(
+                            "add expects numbers as its arguments (got `{}`)",
+                            val
+                        ),
+                    }
+                })),
+                expr.env.clone(),
+            ),
+            Prod => Expression::new(
+                Value::Number(arguments.iter().fold(1.0, |acc, el| {
+                    match el.clone().eval().into_value() {
+                        Number(val) => acc * val,
+                        val => panic!(
+                            "mult expects numbers as its arguments (got `{}`)",
+                            val
+                        ),
+                    }
+                })),
+                expr.env.clone(),
+            ),
+            Exp => Expression::new(
+                Value::Number(
+                    match (
+                        arguments
+                            .get_mut(0)
+                            .expect("exp requires a first argument")
+                            .eval().into_value(),
+                        arguments
+                            .get_mut(1)
+                            .expect("exp requires a second argument")
+                            .eval().into_value(),
+                    ) {
+                        (Number(base), Number(exp)) => base.powf(exp),
+                        (base, exp) => panic!("exp requires its arguments to be both numerical (got `{}` and `{}`)", base, exp),
+                    },
+                ),
+                expr.env.clone(),
+            ),
+            Modulo => Expression::new(
+                Value::Number(
+                    match (
+                        arguments
+                            .get_mut(0)
+                            .expect("modulo requires a first argument")
+                            .eval().into_value(),
+                        arguments
+                            .get_mut(1)
+                            .expect("modulo requires a second argument")
+                            .eval().into_value(),
+                    ) {
+                        (Number(base), Number(modu)) => base % modu,
+                        (base, modu) => panic!("modulo requires its arguments to be both numerical (got `{}` and `{}`)", base, modu),
+                    },
+                ),
+                expr.env.clone(),
+            ),
+            Gt => {
+                let args_evaled = arguments.iter_mut().map(|arg| arg.eval().into_value()).collect::<Vec<Value<'a>>>();
+                match args_evaled.iter().skip(1).zip(args_evaled.iter()).all(|(g, l)| g > l) {
+                    true => Expression::t(),
+                    false => Expression::nil(),
+                }
+            }
+            Ge => {
+                let args_evaled = arguments.iter_mut().map(|arg| arg.eval().into_value()).collect::<Vec<Value<'a>>>();
+                match args_evaled.iter().skip(1).zip(args_evaled.iter()).all(|(g, l)| g >= l) {
+                    true => Expression::t(),
+                    false => Expression::nil(),
+                }
+            }
+            Type => {
+                let arg_type = arguments.get_mut(0).expect("type requires an argument").eval().into_value().as_type();
+                Expression::new(arg_type, expr.env.clone())
+            }
+            Disp => {
+                for mut arg in arguments {
+                    print!("{}\n", arg.eval());
+                }
+                Expression::nil()
+            }
+        }
     }
 }
 

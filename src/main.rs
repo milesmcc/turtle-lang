@@ -1,14 +1,14 @@
 use std::sync::{Arc, RwLock};
 
+extern crate pest;
 extern crate rustyline;
 extern crate rustyline_derive;
-extern crate pest;
 #[macro_use]
 extern crate pest_derive;
 
-use rustyline::error::ReadlineError;
-use rustyline::{Editor, ColorMode, validate};
 use rustyline::config::Configurer;
+use rustyline::error::ReadlineError;
+use rustyline::{validate, ColorMode, Editor};
 use rustyline_derive::{Completer, Helper, Highlighter, Hinter};
 
 pub mod environment;
@@ -48,7 +48,10 @@ fn main() {
 
     let mut rl = Editor::<ReplHelper>::new();
     if rl.load_history(".turtle_history.txt").is_err() {
-        println!("Welcome to Turtle v{}, © 2020 R. Miles McCain (distributed under the MIT license)", env!("CARGO_PKG_VERSION"));
+        println!(
+            "Welcome to Turtle v{}, © 2020 R. Miles McCain (distributed under the MIT license)",
+            env!("CARGO_PKG_VERSION")
+        );
         println!("It looks like this is your first time running Turtle from this directory; no history was loaded.")
     }
 
@@ -69,16 +72,12 @@ fn main() {
                     }
                     Err(err) => eprintln!("{:#}", err),
                 }
-            },
-            Err(ReadlineError::Interrupted) => {
-                break
-            },
-            Err(ReadlineError::Eof) => {
-                break
-            },
+            }
+            Err(ReadlineError::Interrupted) => break,
+            Err(ReadlineError::Eof) => break,
             Err(err) => {
                 eprintln!("Error: {:?}", err);
-                break
+                break;
             }
         }
     }

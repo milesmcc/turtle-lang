@@ -2,7 +2,7 @@ use std::collections::HashMap;
 use std::fmt;
 use std::sync::{Arc, RwLock};
 
-use crate::{Expression, Symbol, Value, Operator};
+use crate::{Expression, Operator, Symbol, Value};
 
 #[derive(Debug)]
 pub struct Environment<'a> {
@@ -50,7 +50,7 @@ impl<'a> Environment<'a> {
             "ge" => Some(Value::Operator(Ge)),
             "type" => Some(Value::Operator(Type)),
             "disp" => Some(Value::Operator(Disp)),
-            _ => None
+            _ => None,
         }
     }
 

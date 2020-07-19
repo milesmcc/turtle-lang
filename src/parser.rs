@@ -22,13 +22,11 @@ pub fn parse<'a>(
 fn build_expression<'a>(pair: Pair<Rule>, env: Arc<RwLock<Environment<'a>>>) -> Expression<'a> {
     Expression::new(
         match pair.as_rule() {
-            Rule::list => {
-                Value::List(
-                    pair.into_inner()
-                        .map(|elem| build_expression(elem, env.clone()))
-                        .collect(),
-                )
-            }
+            Rule::list => Value::List(
+                pair.into_inner()
+                    .map(|elem| build_expression(elem, env.clone()))
+                    .collect(),
+            ),
             Rule::symbol => match pair.as_str() {
                 "t" | "true" => Value::True,
                 "nil" => Value::List(vec![]),
