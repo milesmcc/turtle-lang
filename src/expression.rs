@@ -224,8 +224,12 @@ impl<'a> Expression<'a> {
                         }
                         Function { params, mut expression } => {
                             for (symbol, arg_expr) in params.iter().zip(arguments.iter()) {
+                                // Note: because evaluating the argument expression requires
+                                // accessing the environment, it cannot be done while `get_env_mut`
+                                // is active (as the thread would deadlock).
+                                let arg_evaled = arg_expr.clone().eval();
                                 expression.get_env_mut()
-                                    .assign(symbol.clone(), arg_expr.clone().eval());
+                                    .assign(symbol.clone(), arg_evaled);
                             }
                             expression.eval()
                         }
