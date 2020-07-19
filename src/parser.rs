@@ -1,4 +1,4 @@
-use crate::{Expression, Symbol, Value, Environment};
+use crate::{Environment, Expression, Symbol, Value};
 use pest::iterators::Pair;
 use pest::Parser;
 use std::sync::{Arc, RwLock};
@@ -35,7 +35,14 @@ fn build_expression<'a>(pair: Pair<Rule>, env: Arc<RwLock<Environment<'a>>>) -> 
                 "nil" => Value::List(vec![]),
                 _ => Value::Symbol(String::from(pair.as_str())),
             },
-            Rule::keyword => Value::Keyword(String::from(pair.as_str())),
+            Rule::keyword => {
+                Value::Keyword(String::from(pair.into_inner().next().unwrap().as_str()))
+            }
+            Rule::number => Value::Number(
+                pair.as_str()
+                    .parse()
+                    .expect(format!("cannot parse number `{}`", pair.as_str()).as_str()),
+            ),
 
             // Builtins
             Rule::quote => Value::Quote,
@@ -46,6 +53,13 @@ fn build_expression<'a>(pair: Pair<Rule>, env: Arc<RwLock<Environment<'a>>>) -> 
             Rule::cons => Value::Cons,
             Rule::cond => Value::Cond,
             Rule::label => Value::Label,
+            Rule::add => Value::Add,
+            Rule::mult => Value::Mult,
+            Rule::exp => Value::Exp,
+            Rule::modulo => Value::Modulo,
+            Rule::gt => Value::Gt,
+            Rule::ge => Value::Ge,
+            Rule::type_ => Value::Type,
             Rule::lambda => {
                 let child_env = Environment::with_parent(env.clone());
                 let mut inner = pair.into_inner();

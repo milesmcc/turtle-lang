@@ -4,20 +4,28 @@ COMMENT = _{ "/*" ~ (!"*/" ~ ANY)* ~ "*/" | ("//" | ";;" ) ~ (!NEWLINE ~ ANY)* ~
 // Primitives
 list = { "(" ~ expression* ~ ")" }
 symbol = @{ (LETTER | NUMBER | "-" | "_")+ }
-keyword = @{ ":" ~ symbol }
+keyword = { ":" ~ symbol }
+number = @{ "-"? ~ (ASCII_DIGIT)+ ~ ("." ~ ASCII_DIGIT+)? ~ (^"e" ~ ("+" | "-")? ~ ASCII_DIGIT+)? }
 
-primitive = _{ list | keyword | symbol }
+primitive = _{ list | keyword | number | symbol }
 
 // Builtin operators
-quote = { "quote" }
-atom = { "atom" }
-eq = { "eq" }
-car = { "car" }
-cdr = { "cdr" }
-cons = { "cons" }
-cond = { "cond" }
-label = { "label" }
-builtin = _{ quote | atom | eq | car | cdr | cons | cond | label }
+quote = @{ "quote" }
+atom = @{ "atom" }
+eq = @{ "eq" }
+car = @{ "car" }
+cdr = @{ "cdr" }
+cons = @{ "cons" }
+cond = @{ "cond" }
+label = @{ "label" }
+add = @{ "add" }
+mult = @{ "mult" }
+exp = @{ "exp" }
+modulo = @{ "modulo" }
+gt = @{ "gt" }
+ge = @{ "ge" }
+type_ = @{ "type" }
+builtin = _{ quote | atom | eq | car | cdr | cons | cond | label | add | mult | exp | modulo | gt | ge | type_ }
 
 // Functions
 
