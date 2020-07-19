@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+
 use std::fmt;
 use std::sync::{Arc, RwLock, RwLockReadGuard, RwLockWriteGuard};
 
@@ -193,7 +193,7 @@ impl<'a> Expression<'a> {
                         }
                         Function {
                             params,
-                            mut expressions,
+                            expressions,
                         } => {
                             for (symbol, arg_expr) in params.iter().zip(arguments.iter()) {
                                 // Note: because evaluating the argument expression requires
@@ -221,7 +221,7 @@ impl<'a> Expression<'a> {
                                     arguments.get(0).unwrap()
                                 ),
                             };
-                            let mut expr = arguments
+                            let expr = arguments
                                 .get(1)
                                 .expect(
                                     "label requires a second argument for the assigned expression",
@@ -247,7 +247,7 @@ impl<'a> Expression<'a> {
             }
             True => Expression::new(Value::True, self.env.clone()),
             Symbol(sym) => match self.get_env().lookup(&sym) {
-                Some(mut exp) => exp,
+                Some(exp) => exp,
                 None => panic!("symbol `{}` is undefined", sym),
             },
             _ => self.clone(),
