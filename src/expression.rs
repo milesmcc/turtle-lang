@@ -15,8 +15,8 @@ pub enum Operator {
     Cons,
     Cond,
     Label,
-    Add,
-    Mult,
+    Sum,
+    Prod,
     Exp,
     Modulo,
     Gt,
@@ -109,14 +109,6 @@ impl<'a> Expression<'a> {
     pub fn eval(&mut self) -> Self {
         use self::Operator::*;
         use Value::*;
-
-        // let mut exp = self.clone();
-
-        println!("evaluating: {}", self);
-        println!(
-            "environment ======================\n{}\n===========================================",
-            self.get_env()
-        );
 
         match &self.value {
             List(vals) => {
@@ -349,14 +341,16 @@ impl<'a> Expression<'a> {
                         }
                         Lambda {
                             params,
-                            expressions,
+                            mut expressions,
                         } => {
                             for (symbol, arg_expr) in params.iter().zip(arguments.iter()) {
                                 // Note: because evaluating the argument expression requires
                                 // accessing the environment, it cannot be done while `get_env_mut`
                                 // is active (as the thread would deadlock).
                                 let arg_evaled = arg_expr.clone().eval();
-                                self.get_env_mut().assign(symbol.clone(), arg_evaled);
+                                for exp in &mut expressions {
+                                    exp.get_env_mut().assign(symbol.clone(), arg_evaled.clone());
+                                }
                             }
                             let mut result = Expression::nil();
                             for mut exp in expressions {

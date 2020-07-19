@@ -23,10 +23,9 @@ fn build_expression<'a>(pair: Pair<Rule>, env: Arc<RwLock<Environment<'a>>>) -> 
     Expression::new(
         match pair.as_rule() {
             Rule::list => {
-                let child_env = Environment::with_parent(env.clone());
                 Value::List(
                     pair.into_inner()
-                        .map(|elem| build_expression(elem, child_env.clone()))
+                        .map(|elem| build_expression(elem, env.clone()))
                         .collect(),
                 )
             }
@@ -69,7 +68,7 @@ fn build_expression<'a>(pair: Pair<Rule>, env: Arc<RwLock<Environment<'a>>>) -> 
             }
 
             // Sugar
-            Rule::quote_sugar => {
+            Rule::quote => {
                 let mut elements = vec![Expression::new(
                     Value::Operator(Operator::Quote),
                     env.clone(),

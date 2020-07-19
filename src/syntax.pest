@@ -3,39 +3,20 @@ COMMENT = _{ "/*" ~ (!"*/" ~ ANY)* ~ "*/" | ("//" | ";;" ) ~ (!NEWLINE ~ ANY)* ~
 
 // Primitives
 list = { "(" ~ expression* ~ ")" }
-symbol = @{ (LETTER | NUMBER | "-" | "_")+ }
+symbol = @{ (LETTER | NUMBER | SYMBOL | DASH_PUNCTUATION)+ }
 keyword = { ":" ~ symbol }
 number = @{ "-"? ~ (ASCII_DIGIT)+ ~ ("." ~ ASCII_DIGIT+)? ~ (^"e" ~ ("+" | "-")? ~ ASCII_DIGIT+)? }
 
 primitive = _{ list | keyword | number | symbol }
 
-// Builtin operators
-quote = @{ "quote" }
-atom = @{ "atom" }
-eq = @{ "eq" }
-car = @{ "car" }
-cdr = @{ "cdr" }
-cons = @{ "cons" }
-cond = @{ "cond" }
-label = @{ "label" }
-add = @{ "add" }
-mult = @{ "mult" }
-exp = @{ "exp" }
-modulo = @{ "mod" }
-gt = @{ "gt" }
-ge = @{ "ge" }
-type_ = @{ "type" }
-operator = @{ quote | atom | eq | car | cdr | cons | cond | label | add | mult | exp | modulo | gt | ge | type_ }
-
 // Functions
-
 lambda_symbols = { "(" ~ symbol* ~ ")" }
 lambda = {"(" ~ "lambda" ~ lambda_symbols ~ expression+ ~ ")"}
 function = _{ lambda }
 
 // Sugar
-quote_sugar = { "'" ~ expression}
-sugar = _{ quote_sugar }
+quote = { "'" ~ expression}
+sugar = _{ quote }
 
 expression = _{ sugar | lambda | primitive }
 
