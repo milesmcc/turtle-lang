@@ -1,12 +1,15 @@
-use crate::Expression;
+use crate::{Expression, Symbol};
 
 #[macro_export]
 macro_rules! exp {
     ($value:expr) => {
-        return Err(Exception::new(None, $value));
+        return Err(Exception::new($value, None, None));
     };
     ($value:expr, $expr:expr) => {
-        return Err(Exception::new(Some($expr), $value));
+        return Err(Exception::new($value, Some($expr), None));
+    };
+    ($value:expr, $expr:expr, $note:expr) => {
+        return Err(Exception::new($value, Some($expr), Some($note)));
     };
 }
 
@@ -23,20 +26,23 @@ macro_rules! exp_opt {
 #[derive(Debug, Clone)]
 pub enum ExceptionValue {
     Other(String),
-    UndefinedSymbol(String),
+    UndefinedSymbol(Symbol),
+    ArgumentMismatch,
 }
 
 #[derive(Debug, Clone)]
 pub struct Exception {
     expression: Option<Expression>,
     value: ExceptionValue,
+    note: Option<String>,
 }
 
 impl Exception {
-    pub fn new(expression: Option<Expression>, value: ExceptionValue) -> Self {
+    pub fn new(value: ExceptionValue, expression: Option<Expression>, note: Option<String>) -> Self {
         Exception {
             expression,
-            value
+            value,
+            note
         }
     }
 }

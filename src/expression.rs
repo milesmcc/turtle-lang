@@ -184,10 +184,16 @@ impl Operator {
         use Value::*;
 
         match self {
-            Quote => Ok(arguments
-                .get(0)
-                .expect("quote requires one argument")
-                .clone()),
+            Quote => {
+                if arguments.len() != 1 {
+                    exp!(
+                        EV::ArgumentMismatch,
+                        expr.clone(),
+                        format!("quote requires 1 argument (received {})", arguments.len())
+                    );
+                }
+                Ok(arguments.get(0).unwrap().clone())
+            }
             Atom => match arguments
                 .get_mut(0)
                 .expect("atom requires one argument")
