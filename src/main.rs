@@ -29,7 +29,7 @@ fn main() {
             for value in &mut values {
                 println!("{} -> {}", value.clone(), value.eval());
             }
-        },
+        }
         Err(err) => eprintln!("{}", err),
     }
 }

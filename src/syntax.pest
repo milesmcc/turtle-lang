@@ -3,7 +3,8 @@ COMMENT = _{ "/*" ~ (!"*/" ~ ANY)* ~ "*/" | ("//" | ";;" ) ~ (!NEWLINE ~ ANY)* ~
 
 // Primitives
 list = { "(" ~ expression* ~ ")" }
-symbol = @{ LETTER ~ (LETTER | NUMBER)* }
+symbol = @{ (LETTER | NUMBER | "-" | "_")+ }
+
 primitive = _{ list | symbol }
 
 // Builtin operators
@@ -29,4 +30,4 @@ sugar = _{ quote_sugar }
 
 expression = _{ sugar | lambda | builtin | primitive }
 
-expressions = _{ expression+ }
+expressions = _{ (WHITESPACE | COMMENT)* ~ expression+ }

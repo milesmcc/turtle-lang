@@ -8,7 +8,7 @@ pub type Symbol = String;
 pub struct Environment<'a> {
     values: HashMap<Symbol, Expression<'a>>,
     // This unreadable memory model might cause issues going forward
-    parent: Option<&'a Environment<'a>>,
+    parent: Option<Arc<RwLock<Environment<'a>>>>,
 }
 
 impl<'a> Environment<'a> {
@@ -21,22 +21,18 @@ impl<'a> Environment<'a> {
         }
     }
 
-    pub fn with_parent(parent: &'a Self) -> Self {
-        Self {
+    pub fn with_parent(parent: Arc<RwLock<Self>>) -> Arc<RwLock<Self>> {
+        Arc::new(RwLock::new(Self {
             values: HashMap::new(),
             parent: Some(parent),
-        }
-    }
-
-    pub fn new_child(&'a self) -> Arc<RwLock<Environment<'a>>> {
-        Arc::new(RwLock::new(Self::with_parent(self)))
+        }))
     }
 
     pub fn lookup(&self, symbol: &Symbol) -> Option<Expression<'a>> {
         match self.values.get(symbol) {
             Some(val) => Some(val.clone()),
-            None => match self.parent {
-                Some(parent) => parent.lookup(symbol),
+            None => match &self.parent {
+                Some(parent) => parent.read().expect("cannot access environment parent").lookup(symbol),
                 None => None,
             },
         }
@@ -120,7 +116,6 @@ impl<'a> Expression<'a> {
 
         match &self.value {
             List(vals) => {
-                // TODO: do as match on slice
                 if vals.len() > 0 {
                     let mut operator = vals
                         .get(0)
@@ -187,7 +182,9 @@ impl<'a> Expression<'a> {
                                 .eval();
                             match list.value {
                                 List(mut vals) => {
-                                    vals.remove(0);
+                                    if vals.len() > 0 {
+                                        vals.remove(0);
+                                    }
                                     Expression::new(List(vals), self.env.clone())
                                 }
                                 _ => panic!("cdr expects a list, got `{}`", list),
@@ -244,49 +241,44 @@ impl<'a> Expression<'a> {
                             expression.eval()
                         }
                         Label => {
-                            // TODO: cleanup
-                            let symbol = match &arguments
-                                .get(0)
-                                .expect("label requires an argument for the symbol")
-                                .value
+                            let sym_exp = arguments.get(0).expect("label requires an argument for the symbol").clone();
+                            let symbol = match sym_exp.into_value()
                             {
                                 Symbol(sym) => sym,
                                 _ => panic!(
-                                    "first arg of label must be symbol (received `{}`)",
+                                    "first arg of label must be a literal symbol (received `{}`)",
                                     arguments.get(0).unwrap()
                                 ),
                             };
-                            let expr = arguments
+                            let mut expr = arguments
                                 .get(1)
                                 .expect(
                                     "label requires a second argument for the assigned expression",
                                 )
-                                .clone();
-                            self.get_env_mut().assign(symbol.clone(), expr);
-                            Expression::nil()
+                                .clone().eval();
+                            self.get_env_mut().assign(symbol.clone(), expr.clone());
+                            expr
                         }
                         List(_) | Symbol(_) => {
-                            // TODO: check if list is what we want here
                             let evaled_operator = operator.eval();
-                            // TODO: is there a cleaner way to do this? Yes, there is...
                             let mut new_list = vec![evaled_operator];
                             for arg in arguments {
-                                new_list.push(arg); // TODO: clone?
+                                new_list.push(arg);
                             }
                             Expression::new(Value::List(new_list), self.env.clone()).eval()
                         }
                         val => unimplemented!("unimplemented operator `{:?}`", val),
                     }
                 } else {
-                    panic!("cannot evaluate an empty list!");
+                    self.clone()
                 }
             }
             True => Expression::new(Value::True, self.env.clone()),
             Symbol(sym) => match self.get_env().lookup(&sym) {
-                Some(exp) => exp,
+                Some(mut exp) => exp,
                 None => panic!("symbol `{}` is undefined", sym),
             },
-            _ => panic!("cannot evaluate literal value `{}`", self),
+            _ => self.clone(),
         }
     }
 
@@ -312,8 +304,8 @@ impl<'a> fmt::Display for Environment<'a> {
                 .map(|(k, v)| format!("{} := {}", k, v))
                 .collect::<Vec<String>>()
                 .join("\n"),
-            match self.parent {
-                Some(parent) => format!("{}", parent),
+            match &self.parent {
+                Some(parent) => format!("{}", parent.read().expect("cannot get parent")),
                 None => format!("env has no parent"),
             }
         )

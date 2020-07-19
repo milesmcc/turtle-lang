@@ -5,6 +5,8 @@
         (cond ((atom x) x)
               ('t (recurse (car x))))))
 
-(recurse '(((x))))
+(recurse '(((a))))
 
-(recurse (cons 'b '(y z)))
+(recurse (cons 'x '(y x)))
+
+(= x '(a b x))
