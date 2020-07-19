@@ -6,15 +6,7 @@ use crate::Environment;
 pub type Symbol = String;
 
 #[derive(Debug, Clone, PartialEq, PartialOrd)]
-pub enum Value<'a> {
-    List(Vec<Expression<'a>>),
-    Number(f64),
-    Text(String),
-    Keyword(String),
-    Symbol(Symbol),
-    True,
-
-    // Primitive (axiomatic) operators
+pub enum Operator {
     Quote,
     Atom,
     Eq,
@@ -30,8 +22,22 @@ pub enum Value<'a> {
     Gt,
     Ge,
     Type,
+    Disp,
+}
 
-    Function {
+#[derive(Debug, Clone, PartialEq, PartialOrd)]
+pub enum Value<'a> {
+    List(Vec<Expression<'a>>),
+    Number(f64),
+    Text(String),
+    Keyword(String),
+    Symbol(Symbol),
+    True,
+
+    // Primitive (axiomatic) operators
+    Operator(Operator),
+
+    Lambda {
         params: Vec<Symbol>,
         expressions: Vec<Expression<'a>>,
     },
@@ -47,10 +53,11 @@ impl<'a> Value<'a> {
             Text(_) => "text".to_string(),
             Keyword(_) => "keyword".to_string(),
             Symbol(_) => "symbol".to_string(),
-            Function {
+            Operator(_) => "operator".to_string(),
+            Lambda {
                 params: _,
                 expressions: _,
-            } => "function".to_string(),
+            } => "lambda".to_string(),
             val => format!("{:?}", val).to_lowercase(),
         })
     }
@@ -100,15 +107,16 @@ impl<'a> Expression<'a> {
     }
 
     pub fn eval(&mut self) -> Self {
+        use self::Operator::*;
         use Value::*;
 
         // let mut exp = self.clone();
 
-        // println!("evaluating: {}", self);
-        // println!(
-        //     "environment ======================\n{}\n===========================================",
-        //     self.get_env()
-        // );
+        println!("evaluating: {}", self);
+        println!(
+            "environment ======================\n{}\n===========================================",
+            self.get_env()
+        );
 
         match &self.value {
             List(vals) => {
@@ -119,7 +127,9 @@ impl<'a> Expression<'a> {
                         .clone();
                     let mut arguments: Vec<Expression<'a>> = vals.iter().skip(1).cloned().collect();
                     match operator.value {
-                        Quote => arguments
+                        Operator(operand) =>    {
+                            match operand {
+                            Quote => arguments
                             .get(0)
                             .expect("quote requires one argument")
                             .clone(),
@@ -219,23 +229,6 @@ impl<'a> Expression<'a> {
                                 }
                             }
                             panic!("none of cond was true");
-                        }
-                        Function {
-                            params,
-                            expressions,
-                        } => {
-                            for (symbol, arg_expr) in params.iter().zip(arguments.iter()) {
-                                // Note: because evaluating the argument expression requires
-                                // accessing the environment, it cannot be done while `get_env_mut`
-                                // is active (as the thread would deadlock).
-                                let arg_evaled = arg_expr.clone().eval();
-                                self.get_env_mut().assign(symbol.clone(), arg_evaled);
-                            }
-                            let mut result = Expression::nil();
-                            for mut exp in expressions {
-                                result = exp.eval();
-                            }
-                            result
                         }
                         Label => {
                             let sym_exp = arguments
@@ -338,6 +331,14 @@ impl<'a> Expression<'a> {
                             let arg_type = arguments.get_mut(0).expect("type requires an argument").eval().into_value().as_type();
                             Expression::new(arg_type, self.env.clone())
                         }
+                        Disp => {
+                            for mut arg in arguments {
+                                print!("{}\n", arg.eval());
+                            }
+                            Expression::nil()
+                        }
+                    }
+                        }
                         List(_) | Symbol(_) => {
                             let evaled_operator = operator.eval();
                             let mut new_list = vec![evaled_operator];
@@ -346,7 +347,24 @@ impl<'a> Expression<'a> {
                             }
                             Expression::new(Value::List(new_list), self.env.clone()).eval()
                         }
-                        val => unimplemented!("unimplemented operator `{:?}`", val),
+                        Lambda {
+                            params,
+                            expressions,
+                        } => {
+                            for (symbol, arg_expr) in params.iter().zip(arguments.iter()) {
+                                // Note: because evaluating the argument expression requires
+                                // accessing the environment, it cannot be done while `get_env_mut`
+                                // is active (as the thread would deadlock).
+                                let arg_evaled = arg_expr.clone().eval();
+                                self.get_env_mut().assign(symbol.clone(), arg_evaled);
+                            }
+                            let mut result = Expression::nil();
+                            for mut exp in expressions {
+                                result = exp.eval();
+                            }
+                            result
+                        }
+                        val => unimplemented!("unimplemented operator `{}` in list `{}`", val, self.value),
                     }
                 } else {
                     self.clone()
@@ -369,6 +387,12 @@ impl<'a> Expression<'a> {
         self.env
             .write()
             .expect("unable to mutably access environment")
+    }
+}
+
+impl fmt::Display for Operator {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", format!("{:?}", self).to_lowercase().as_str())
     }
 }
 
@@ -399,7 +423,7 @@ impl<'a> fmt::Display for Value<'a> {
             Symbol(val) => write!(f, "{}", val),
             Keyword(val) => write!(f, ":{}", val),
             True => write!(f, "true"),
-            Function {
+            Lambda {
                 params,
                 expressions,
             } => write!(

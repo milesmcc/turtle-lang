@@ -21,11 +21,11 @@ label = @{ "label" }
 add = @{ "add" }
 mult = @{ "mult" }
 exp = @{ "exp" }
-modulo = @{ "modulo" }
+modulo = @{ "mod" }
 gt = @{ "gt" }
 ge = @{ "ge" }
 type_ = @{ "type" }
-builtin = _{ quote | atom | eq | car | cdr | cons | cond | label | add | mult | exp | modulo | gt | ge | type_ }
+operator = @{ quote | atom | eq | car | cdr | cons | cond | label | add | mult | exp | modulo | gt | ge | type_ }
 
 // Functions
 
@@ -37,6 +37,6 @@ function = _{ lambda }
 quote_sugar = { "'" ~ expression}
 sugar = _{ quote_sugar }
 
-expression = _{ sugar | lambda | builtin | primitive }
+expression = _{ sugar | lambda | primitive }
 
 expressions = _{ (WHITESPACE | COMMENT)* ~ expression+ }

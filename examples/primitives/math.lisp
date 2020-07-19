@@ -17,3 +17,7 @@
 (ge 3 3 5 3)
 (eq 5 5)
 (eq 55 50)
+(disp 424242)
+(add 55 -1)
+(label 'sub1 (lambda (x) (disp x) (cond ((eq x 0) x) ('t (sub1 (add x -1))))))
+(sub1 55)

@@ -1,4 +1,4 @@
-use crate::{Environment, Expression, Symbol, Value};
+use crate::{Environment, Expression, Operator, Symbol, Value};
 use pest::iterators::Pair;
 use pest::Parser;
 use std::sync::{Arc, RwLock};
@@ -43,23 +43,6 @@ fn build_expression<'a>(pair: Pair<Rule>, env: Arc<RwLock<Environment<'a>>>) -> 
                     .parse()
                     .expect(format!("cannot parse number `{}`", pair.as_str()).as_str()),
             ),
-
-            // Builtins
-            Rule::quote => Value::Quote,
-            Rule::atom => Value::Atom,
-            Rule::eq => Value::Eq,
-            Rule::car => Value::Car,
-            Rule::cdr => Value::Cdr,
-            Rule::cons => Value::Cons,
-            Rule::cond => Value::Cond,
-            Rule::label => Value::Label,
-            Rule::add => Value::Add,
-            Rule::mult => Value::Mult,
-            Rule::exp => Value::Exp,
-            Rule::modulo => Value::Modulo,
-            Rule::gt => Value::Gt,
-            Rule::ge => Value::Ge,
-            Rule::type_ => Value::Type,
             Rule::lambda => {
                 let child_env = Environment::with_parent(env.clone());
                 let mut inner = pair.into_inner();
@@ -79,7 +62,7 @@ fn build_expression<'a>(pair: Pair<Rule>, env: Arc<RwLock<Environment<'a>>>) -> 
                 let expressions = inner
                     .map(|exp| build_expression(exp, child_env.clone()))
                     .collect();
-                Value::Function {
+                Value::Lambda {
                     params: symbols,
                     expressions,
                 }
@@ -87,7 +70,10 @@ fn build_expression<'a>(pair: Pair<Rule>, env: Arc<RwLock<Environment<'a>>>) -> 
 
             // Sugar
             Rule::quote_sugar => {
-                let mut elements = vec![Expression::new(Value::Quote, env.clone())];
+                let mut elements = vec![Expression::new(
+                    Value::Operator(Operator::Quote),
+                    env.clone(),
+                )];
                 elements.append(
                     &mut pair
                         .into_inner()

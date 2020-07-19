@@ -5,13 +5,13 @@ extern crate pest;
 #[macro_use]
 extern crate pest_derive;
 
+pub mod environment;
 pub mod expression;
 pub mod parser;
-pub mod environment;
 
-pub use expression::{Expression, Value, Symbol};
-pub use parser::parse;
 pub use environment::Environment;
+pub use expression::{Expression, Operator, Symbol, Value};
+pub use parser::parse;
 
 fn main() {
     let mut stdin: Vec<u8> = Vec::new();

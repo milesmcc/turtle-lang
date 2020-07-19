@@ -2,7 +2,7 @@ use std::collections::HashMap;
 use std::fmt;
 use std::sync::{Arc, RwLock};
 
-use crate::{Symbol, Expression};
+use crate::{Expression, Symbol, Value, Operator};
 
 #[derive(Debug)]
 pub struct Environment<'a> {
@@ -28,6 +28,32 @@ impl<'a> Environment<'a> {
         }))
     }
 
+    fn get_literal(symbol: &Symbol) -> Option<Value<'a>> {
+        use Operator::*;
+
+        match symbol.as_str() {
+            "nil" => Some(Value::List(vec![])),
+            "t" => Some(Value::True),
+            "quote" => Some(Value::Operator(Quote)),
+            "atom" => Some(Value::Operator(Atom)),
+            "eq" => Some(Value::Operator(Eq)),
+            "car" => Some(Value::Operator(Car)),
+            "cdr" => Some(Value::Operator(Cdr)),
+            "cons" => Some(Value::Operator(Cons)),
+            "cond" => Some(Value::Operator(Cond)),
+            "label" => Some(Value::Operator(Label)),
+            "add" => Some(Value::Operator(Add)),
+            "mult" => Some(Value::Operator(Mult)),
+            "exp" => Some(Value::Operator(Exp)),
+            "modulo" => Some(Value::Operator(Modulo)),
+            "gt" => Some(Value::Operator(Gt)),
+            "ge" => Some(Value::Operator(Ge)),
+            "type" => Some(Value::Operator(Type)),
+            "disp" => Some(Value::Operator(Disp)),
+            _ => None
+        }
+    }
+
     pub fn lookup(&self, symbol: &Symbol) -> Option<Expression<'a>> {
         match self.values.get(symbol) {
             Some(val) => Some(val.clone()),
@@ -36,7 +62,10 @@ impl<'a> Environment<'a> {
                     .read()
                     .expect("cannot access environment parent")
                     .lookup(symbol),
-                None => None,
+                None => match Self::get_literal(symbol) {
+                    Some(val) => Some(Expression::new(val, Arc::new(RwLock::new(Self::root())))),
+                    _ => None,
+                },
             },
         }
     }
@@ -45,7 +74,6 @@ impl<'a> Environment<'a> {
         self.values.insert(symbol, exp);
     }
 }
-
 
 impl<'a> fmt::Display for Environment<'a> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
