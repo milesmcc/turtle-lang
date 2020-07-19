@@ -1,4 +1,4 @@
-use crate::expression::{Environment, Expression, Symbol, Value};
+use crate::{Expression, Symbol, Value, Environment};
 use pest::iterators::Pair;
 use pest::Parser;
 use std::sync::{Arc, RwLock};
@@ -35,6 +35,7 @@ fn build_expression<'a>(pair: Pair<Rule>, env: Arc<RwLock<Environment<'a>>>) -> 
                 "nil" => Value::List(vec![]),
                 _ => Value::Symbol(String::from(pair.as_str())),
             },
+            Rule::keyword => Value::Keyword(String::from(pair.as_str())),
 
             // Builtins
             Rule::quote => Value::Quote,

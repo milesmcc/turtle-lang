@@ -7,6 +7,11 @@ extern crate pest_derive;
 
 pub mod expression;
 pub mod parser;
+pub mod environment;
+
+pub use expression::{Expression, Value, Symbol};
+pub use parser::parse;
+pub use environment::Environment;
 
 fn main() {
     let mut stdin: Vec<u8> = Vec::new();
@@ -19,7 +24,7 @@ fn main() {
     };
     let input_string = String::from_utf8_lossy(stdin.as_slice());
     println!("Running: {}", input_string);
-    let env = expression::Environment::root();
+    let env = environment::Environment::root();
     match parser::parse(input_string.as_ref(), Arc::new(RwLock::new(env))) {
         Ok(mut values) => {
             println!("parsed successfully");
