@@ -69,6 +69,17 @@ pub struct Expression<'a> {
     env: Arc<RwLock<Environment<'a>>>,
 }
 
+#[derive(Debug, Clone)]
+pub enum ExceptionValue {
+    Other(String),
+}
+
+#[derive(Debug, Clone)]
+pub struct Exception<'a> {
+    expression: Option<Expression<'a>>,
+    value: ExceptionValue,
+}
+
 impl<'a> PartialEq for Expression<'a> {
     fn eq(&self, other: &Self) -> bool {
         // TODO: do we need to check whether the environments are the same?
