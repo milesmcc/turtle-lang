@@ -70,7 +70,10 @@ fn main() {
                 match parser::parse(line.as_str(), env.clone()) {
                     Ok(mut values) => {
                         for value in &mut values {
-                            println!("   = {:#}", value.eval());
+                            match value.eval() {
+                                Ok(result) => println!("   = {:#}", result),
+                                Err(error) => eprintln!("error: {:?}", error),
+                            }
                         }
                     }
                     Err(err) => eprintln!("{:#}", err),

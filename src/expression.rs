@@ -1,8 +1,8 @@
 use std::fmt;
 use std::sync::{Arc, RwLock, RwLockReadGuard, RwLockWriteGuard};
 
-use crate::exception; // macro
-use crate::{Environment, ExceptionValue as EV, Exception};
+use crate::exp; // macro
+use crate::{Environment, Exception, ExceptionValue as EV};
 
 pub type Symbol = String;
 
@@ -27,8 +27,8 @@ pub enum Operator {
 }
 
 #[derive(Debug, Clone, PartialEq, PartialOrd)]
-pub enum Value<'a> {
-    List(Vec<Expression<'a>>),
+pub enum Value {
+    List(Vec<Expression>),
     Number(f64),
     Text(String),
     Keyword(String),
@@ -40,11 +40,11 @@ pub enum Value<'a> {
 
     Lambda {
         params: Vec<Symbol>,
-        expressions: Vec<Expression<'a>>,
+        expressions: Vec<Expression>,
     },
 }
 
-impl<'a> Value<'a> {
+impl Value {
     pub fn as_type(&self) -> Self {
         use Value::*;
 
@@ -65,20 +65,20 @@ impl<'a> Value<'a> {
 }
 
 #[derive(Debug, Clone)]
-pub struct Expression<'a> {
-    value: Value<'a>,
-    env: Arc<RwLock<Environment<'a>>>,
+pub struct Expression {
+    value: Value,
+    env: Arc<RwLock<Environment>>,
 }
 
-impl<'a> PartialEq for Expression<'a> {
+impl PartialEq for Expression {
     fn eq(&self, other: &Self) -> bool {
         // TODO: do we need to check whether the environments are the same?
         self.value == other.value
     }
 }
 
-impl<'a> Expression<'a> {
-    pub fn new(value: Value<'a>, env: Arc<RwLock<Environment<'a>>>) -> Self {
+impl Expression {
+    pub fn new(value: Value, env: Arc<RwLock<Environment>>) -> Self {
         Self {
             value: value,
             env: env,
@@ -99,11 +99,11 @@ impl<'a> Expression<'a> {
         }
     }
 
-    pub fn get_value(&self) -> &'a Value {
+    pub fn get_value(&self) -> &Value {
         &self.value
     }
 
-    pub fn into_value(self) -> Value<'a> {
+    pub fn into_value(self) -> Value {
         self.value
     }
 
@@ -113,11 +113,8 @@ impl<'a> Expression<'a> {
         match &self.value {
             List(vals) => {
                 if vals.len() > 0 {
-                    let mut operator = vals
-                        .get(0)
-                        .unwrap()
-                        .clone();
-                    let arguments: Vec<Expression<'a>> = vals.iter().skip(1).cloned().collect();
+                    let mut operator = vals.get(0).unwrap().clone();
+                    let arguments: Vec<Expression> = vals.iter().skip(1).cloned().collect();
                     match operator.value {
                         Operator(operand) => operand.apply(arguments, self),
                         List(_) | Symbol(_) => {
@@ -138,7 +135,8 @@ impl<'a> Expression<'a> {
                                 // is active (as the thread would deadlock).
                                 let arg_evaled = arg_expr.clone().eval();
                                 for exp in &mut expressions {
-                                    exp.get_env_mut().assign(symbol.clone(), arg_evaled.clone()?);
+                                    exp.get_env_mut()
+                                        .assign(symbol.clone(), arg_evaled.clone()?);
                                 }
                             }
                             let mut result = Expression::nil();
@@ -159,68 +157,68 @@ impl<'a> Expression<'a> {
             }
             Symbol(sym) => match self.get_env().lookup(&sym) {
                 Some(exp) => Ok(exp),
-                None => exception!(EV::UndefinedSymbol(sym.clone()), self.clone),
+                None => exp!(EV::UndefinedSymbol(sym.clone()), self.clone()),
             },
             _ => Ok(self.clone()),
         }
     }
 
-    fn get_env(&self) -> RwLockReadGuard<Environment<'a>> {
+    fn get_env(&self) -> RwLockReadGuard<Environment> {
         self.env.read().expect("unable to access environment")
     }
 
-    fn get_env_mut(&mut self) -> RwLockWriteGuard<Environment<'a>> {
+    fn get_env_mut(&mut self) -> RwLockWriteGuard<Environment> {
         self.env
             .write()
             .expect("unable to mutably access environment")
     }
 }
 
-impl<'a> Operator {
+impl Operator {
     pub fn apply(
         &self,
-        mut arguments: Vec<Expression<'a>>,
-        expr: &mut Expression<'a>,
-    ) -> Result<Expression<'a>, Exception> {
+        mut arguments: Vec<Expression>,
+        expr: &mut Expression,
+    ) -> Result<Expression, Exception> {
         use crate::Operator::*;
         use Value::*;
 
         match self {
-            Quote => arguments
+            Quote => Ok(arguments
                 .get(0)
-                .unwrap_or_else("quote requires one argument")
-                .clone(),
+                .expect("quote requires one argument")
+                .clone()),
             Atom => match arguments
                 .get_mut(0)
                 .expect("atom requires one argument")
-                .eval()
+                .eval()?
                 .into_value()
             {
-                List(_) => Expression::new(Value::List(vec![]), expr.env.clone()),
-                _ => Expression::new(Value::True, expr.env.clone()),
+                List(_) => Ok(Expression::new(Value::List(vec![]), expr.env.clone())),
+                _ => Ok(Expression::new(Value::True, expr.env.clone())),
             },
             Eq => {
                 let first = arguments
                     .get_mut(0)
                     .expect("eq requires a first argument")
-                    .eval();
+                    .eval()?;
                 let second = arguments
                     .get_mut(1)
                     .expect("eq requires a second argument")
-                    .eval();
+                    .eval()?;
                 match (first.into_value(), second.into_value()) {
                     (List(l1), List(l2)) => {
                         if l1.len() == 0 && l2.len() == 0 {
-                            Expression::t()
+                            Ok(Expression::t())
                         } else {
-                            Expression::nil()
+                            Ok(Expression::nil())
                         }
                     }
                     (v1, v2) => {
                         if v1 == v2 {
-                            Expression::t()
+                            Ok(Expression::t())
                         } else {
-                            Expression::nil()
+                            Ok(Expression::nil())
                         }
                     }
                 }
@@ -229,9 +227,9 @@ impl<'a> Operator {
                 let list = arguments
                     .get_mut(0)
                     .expect("car requires an argument")
-                    .eval();
+                    .eval()?;
                 match list.value {
-                    List(mut vals) => vals.remove(0),
+                    List(mut vals) => Ok(vals.get(0).expect("cannot car empty list").clone()),
                     _ => panic!("car expects a list, got `{}`", list),
                 }
             }
@@ -239,50 +237,40 @@ impl<'a> Operator {
                 let list = arguments
                     .get_mut(0)
                     .expect("cdr requires an argument")
-                    .eval();
+                    .eval()?;
                 match list.value {
                     List(mut vals) => {
                         if vals.len() > 0 {
                             vals.remove(0);
                         }
-                        Expression::new(List(vals), expr.env.clone())
+                        Ok(Expression::new(List(vals), expr.env.clone()))
                     }
                     _ => panic!("cdr expects a list, got `{}`", list),
                 }
             }
             Cons => {
-                let first = arguments[0].eval();
-                let list = arguments[1].eval();
+                let first = arguments[0].eval()?;
+                let list = arguments[1].eval()?;
                 match list.value {
                     List(mut vals) => {
                         vals.insert(0, first);
-                        Expression::new(List(vals), expr.env.clone())
+                        Ok(Expression::new(List(vals), expr.env.clone()))
                     }
-                    _ => panic!(
-                        "cons expects a list as its second argument, got `{}`",
-                        list
-                    ),
+                    _ => panic!("cons expects a list as its second argument, got `{}`", list),
                 }
             }
             Cond => {
                 for argument in arguments {
                     match argument.value {
                         List(mut elems) => {
-                            let cond = {
-                                elems.get_mut(0).expect("cond must have a conditional")
-                            };
-                            if cond.eval().into_value() == Value::True {
-                                let val = {
-                                    elems
-                                        .get_mut(1)
-                                        .expect("cond must have a value to eval")
-                                };
+                            let cond = { elems.get_mut(0).expect("cond must have a conditional") };
+                            if cond.eval()?.into_value() == Value::True {
+                                let val =
+                                    { elems.get_mut(1).expect("cond must have a value to eval") };
                                 return val.eval();
                             }
                         }
-                        _ => {
-                            panic!("cond must be called on a list, got `{}`", argument)
-                        }
+                        _ => panic!("cond must be called on a list, got `{}`", argument),
                     }
                 }
                 panic!("none of cond was true");
@@ -292,7 +280,7 @@ impl<'a> Operator {
                     .get(0)
                     .expect("label requires an argument for the symbol")
                     .clone()
-                    .eval();
+                    .eval()?;
                 let symbol = match sym_exp.into_value() {
                     Symbol(sym) => sym,
                     _ => panic!(
@@ -302,97 +290,121 @@ impl<'a> Operator {
                 };
                 let assigned_expr = arguments
                     .get(1)
-                    .expect(
-                        "label requires a second argument for the assigned expression",
-                    )
+                    .expect("label requires a second argument for the assigned expression")
                     .clone()
-                    .eval();
-                    expr.get_env_mut().assign(symbol.clone(), assigned_expr.clone());
-                    assigned_expr
+                    .eval()?;
+                expr.get_env_mut()
+                    .assign(symbol.clone(), assigned_expr.clone());
+                Ok(assigned_expr)
             }
-            Sum => Expression::new(
-                Value::Number(arguments.iter().fold(0.0, |acc, el| {
-                    match el.clone().eval().into_value() {
-                        Number(val) => acc + val,
-                        val => panic!(
-                            "add expects numbers as its arguments (got `{}`)",
-                            val
-                        ),
+            Sum => {
+                let mut sum = 0.0;
+                for mut arg in arguments {
+                    match arg.eval()?.into_value() {
+                        Number(val) => sum += val,
+                        val => panic!("add expects numbers as its arguments (got `{}`)", val),
                     }
-                })),
-                expr.env.clone(),
-            ),
-            Prod => Expression::new(
-                Value::Number(arguments.iter().fold(1.0, |acc, el| {
-                    match el.clone().eval().into_value() {
-                        Number(val) => acc * val,
-                        val => panic!(
-                            "mult expects numbers as its arguments (got `{}`)",
-                            val
-                        ),
+                }
+                Ok(Expression::new(Value::Number(sum), expr.env.clone()))
+            }
+            Prod => {
+                let mut prod = 1.0;
+                for mut arg in arguments {
+                    match arg.eval()?.into_value() {
+                        Number(val) => prod *= val,
+                        val => panic!("prod expects numbers as its arguments (got `{}`)", val),
                     }
-                })),
-                expr.env.clone(),
-            ),
-            Exp => Expression::new(
-                Value::Number(
-                    match (
-                        arguments
-                            .get_mut(0)
-                            .expect("exp requires a first argument")
-                            .eval().into_value(),
-                        arguments
-                            .get_mut(1)
-                            .expect("exp requires a second argument")
-                            .eval().into_value(),
-                    ) {
-                        (Number(base), Number(exp)) => base.powf(exp),
-                        (base, exp) => panic!("exp requires its arguments to be both numerical (got `{}` and `{}`)", base, exp),
-                    },
-                ),
-                expr.env.clone(),
-            ),
-            Modulo => Expression::new(
-                Value::Number(
-                    match (
-                        arguments
-                            .get_mut(0)
-                            .expect("modulo requires a first argument")
-                            .eval().into_value(),
-                        arguments
-                            .get_mut(1)
-                            .expect("modulo requires a second argument")
-                            .eval().into_value(),
-                    ) {
-                        (Number(base), Number(modu)) => base % modu,
-                        (base, modu) => panic!("modulo requires its arguments to be both numerical (got `{}` and `{}`)", base, modu),
-                    },
-                ),
-                expr.env.clone(),
-            ),
+                }
+                Ok(Expression::new(Value::Number(prod), expr.env.clone()))
+            }
+            Exp => {
+                let base = arguments
+                    .get_mut(0)
+                    .expect("exp requires a first argument")
+                    .eval()?
+                    .into_value();
+                let exp = arguments
+                    .get_mut(1)
+                    .expect("exp requires a second argument")
+                    .eval()?
+                    .into_value();
+                match (base, exp) {
+                    (Number(base), Number(exp)) => Ok(Expression::new(
+                        Value::Number(base.powf(exp)),
+                        expr.env.clone(),
+                    )),
+                    (base, exp) => panic!(
+                        "exp requires its arguments to be both numeric (got `{}` and `{}`)",
+                        base, exp
+                    ),
+                }
+            }
+            Modulo => {
+                let val = arguments
+                    .get_mut(0)
+                    .expect("modulo requires a first argument")
+                    .eval()?
+                    .into_value();
+                let modu = arguments
+                    .get_mut(1)
+                    .expect("modulo requires a second argument")
+                    .eval()?
+                    .into_value();
+                match (val, modu) {
+                    (Number(first), Number(second)) => Ok(Expression::new(
+                        Value::Number(first % second),
+                        expr.env.clone(),
+                    )),
+                    (base, exp) => panic!(
+                        "modulo requires its arguments to be both numeric (got `{}` and `{}`)",
+                        base, exp
+                    ),
+                }
+            }
             Gt => {
-                let args_evaled = arguments.iter_mut().map(|arg| arg.eval().into_value()).collect::<Vec<Value<'a>>>();
-                match args_evaled.iter().skip(1).zip(args_evaled.iter()).all(|(g, l)| g > l) {
-                    true => Expression::t(),
-                    false => Expression::nil(),
+                let mut args_evaled = Vec::with_capacity(arguments.len());
+                for mut arg in arguments {
+                    args_evaled.push(arg.eval()?);
+                }
+                match args_evaled
+                    .iter()
+                    .skip(1)
+                    .zip(args_evaled.iter())
+                    .all(|(g, l)| g > l)
+                {
+                    true => Ok(Expression::t()),
+                    false => Ok(Expression::nil()),
                 }
             }
             Ge => {
-                let args_evaled = arguments.iter_mut().map(|arg| arg.eval().into_value()).collect::<Vec<Value<'a>>>();
-                match args_evaled.iter().skip(1).zip(args_evaled.iter()).all(|(g, l)| g >= l) {
-                    true => Expression::t(),
-                    false => Expression::nil(),
+                let mut args_evaled = Vec::with_capacity(arguments.len());
+                for mut arg in arguments {
+                    args_evaled.push(arg.eval()?);
+                }
+                match args_evaled
+                    .iter()
+                    .skip(1)
+                    .zip(args_evaled.iter())
+                    .all(|(g, l)| g >= l)
+                {
+                    true => Ok(Expression::t()),
+                    false => Ok(Expression::nil()),
                 }
             }
             Type => {
-                let arg_type = arguments.get_mut(0).expect("type requires an argument").eval().into_value().as_type();
-                Expression::new(arg_type, expr.env.clone())
+                let arg_type = arguments
+                    .get_mut(0)
+                    .expect("type requires an argument")
+                    .eval()?
+                    .into_value()
+                    .as_type();
+                Ok(Expression::new(arg_type, expr.env.clone()))
             }
             Disp => {
                 for mut arg in arguments {
-                    print!("{}\n", arg.eval());
+                    print!("{}\n", arg.eval()?);
                 }
-                Expression::nil()
+                Ok(Expression::nil())
             }
         }
     }
@@ -404,13 +416,13 @@ impl fmt::Display for Operator {
     }
 }
 
-impl<'a> fmt::Display for Expression<'a> {
+impl fmt::Display for Expression {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}", self.value)
     }
 }
 
-impl<'a> fmt::Display for Value<'a> {
+impl fmt::Display for Value {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         use Value::*;
 
@@ -453,7 +465,7 @@ impl<'a> fmt::Display for Value<'a> {
     }
 }
 
-impl<'a> PartialOrd for Expression<'a> {
+impl PartialOrd for Expression {
     fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
         self.value.partial_cmp(&other.value)
     }
