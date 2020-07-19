@@ -1,7 +1,8 @@
 use std::fmt;
 use std::sync::{Arc, RwLock, RwLockReadGuard, RwLockWriteGuard};
 
-use crate::Environment;
+use crate::exception; // macro
+use crate::{Environment, ExceptionValue as EV, Exception};
 
 pub type Symbol = String;
 
@@ -69,17 +70,6 @@ pub struct Expression<'a> {
     env: Arc<RwLock<Environment<'a>>>,
 }
 
-#[derive(Debug, Clone)]
-pub enum ExceptionValue {
-    Other(String),
-}
-
-#[derive(Debug, Clone)]
-pub struct Exception<'a> {
-    expression: Option<Expression<'a>>,
-    value: ExceptionValue,
-}
-
 impl<'a> PartialEq for Expression<'a> {
     fn eq(&self, other: &Self) -> bool {
         // TODO: do we need to check whether the environments are the same?
@@ -117,7 +107,7 @@ impl<'a> Expression<'a> {
         self.value
     }
 
-    pub fn eval(&mut self) -> Self {
+    pub fn eval(&mut self) -> Result<Self, Exception> {
         use Value::*;
 
         match &self.value {
@@ -125,13 +115,13 @@ impl<'a> Expression<'a> {
                 if vals.len() > 0 {
                     let mut operator = vals
                         .get(0)
-                        .expect("list must have operator (this should never happen)")
+                        .unwrap()
                         .clone();
-                    let mut arguments: Vec<Expression<'a>> = vals.iter().skip(1).cloned().collect();
+                    let arguments: Vec<Expression<'a>> = vals.iter().skip(1).cloned().collect();
                     match operator.value {
                         Operator(operand) => operand.apply(arguments, self),
                         List(_) | Symbol(_) => {
-                            let evaled_operator = operator.eval();
+                            let evaled_operator = operator.eval()?;
                             let mut new_list = vec![evaled_operator];
                             for arg in arguments {
                                 new_list.push(arg);
@@ -148,14 +138,14 @@ impl<'a> Expression<'a> {
                                 // is active (as the thread would deadlock).
                                 let arg_evaled = arg_expr.clone().eval();
                                 for exp in &mut expressions {
-                                    exp.get_env_mut().assign(symbol.clone(), arg_evaled.clone());
+                                    exp.get_env_mut().assign(symbol.clone(), arg_evaled.clone()?);
                                 }
                             }
                             let mut result = Expression::nil();
                             for mut exp in expressions {
-                                result = exp.eval();
+                                result = exp.eval()?;
                             }
-                            result
+                            Ok(result)
                         }
                         val => unimplemented!(
                             "unimplemented operator `{}` in list `{}`",
@@ -164,15 +154,14 @@ impl<'a> Expression<'a> {
                         ),
                     }
                 } else {
-                    self.clone()
+                    Ok(self.clone())
                 }
             }
-            True => Expression::new(Value::True, self.env.clone()),
             Symbol(sym) => match self.get_env().lookup(&sym) {
-                Some(exp) => exp,
-                None => panic!("symbol `{}` is undefined", sym),
+                Some(exp) => Ok(exp),
+                None => exception!(EV::UndefinedSymbol(sym.clone()), self.clone),
             },
-            _ => self.clone(),
+            _ => Ok(self.clone()),
         }
     }
 
@@ -192,14 +181,14 @@ impl<'a> Operator {
         &self,
         mut arguments: Vec<Expression<'a>>,
         expr: &mut Expression<'a>,
-    ) -> Expression<'a> {
+    ) -> Result<Expression<'a>, Exception> {
         use crate::Operator::*;
         use Value::*;
 
         match self {
             Quote => arguments
                 .get(0)
-                .expect("quote requires one argument")
+                .unwrap_or_else("quote requires one argument")
                 .clone(),
             Atom => match arguments
                 .get_mut(0)

@@ -8,16 +8,19 @@ extern crate pest_derive;
 
 use rustyline::config::Configurer;
 use rustyline::error::ReadlineError;
-use rustyline::{validate, ColorMode, Editor};
+use rustyline::{ColorMode, Editor};
 use rustyline_derive::{Completer, Helper, Highlighter, Hinter};
 
 pub mod environment;
 pub mod expression;
 pub mod parser;
+pub mod exceptions;
 
 pub use environment::Environment;
 pub use expression::{Expression, Operator, Symbol, Value};
 pub use parser::parse;
+#[macro_use]
+pub use exceptions::{Exception, ExceptionValue};
 use rustyline::validate::{ValidationContext, ValidationResult, Validator};
 
 #[derive(Completer, Helper, Highlighter, Hinter)]
@@ -25,7 +28,7 @@ struct ReplHelper {}
 
 impl Validator for ReplHelper {
     fn validate(&self, ctx: &mut ValidationContext) -> Result<ValidationResult, ReadlineError> {
-        use ValidationResult::{Incomplete, Invalid, Valid};
+        use ValidationResult::{Invalid, Valid};
         let input = ctx.input();
         let mut depth = 0;
         for character in input.chars() {
