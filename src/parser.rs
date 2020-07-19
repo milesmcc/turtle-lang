@@ -61,13 +61,12 @@ fn build_expression<'a>(pair: Pair<Rule>, env: Arc<RwLock<Environment<'a>>>) -> 
                         _ => panic!("cannot have lambda args that aren't symbols"),
                     }
                 }
-                let expression = build_expression(
-                    inner.next().expect("lambda must have expression"),
-                    child_env.clone(),
-                );
+                let expressions = inner
+                    .map(|exp| build_expression(exp, child_env.clone()))
+                    .collect();
                 Value::Function {
                     params: symbols,
-                    expression: Box::new(expression),
+                    expressions,
                 }
             }
 

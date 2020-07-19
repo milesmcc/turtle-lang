@@ -1,17 +1,4 @@
-(cond ('t 'hi))
-
-(label name t)
-
-(label temp (lambda (x) (label name x)))
-
-(label deep (lambda (x) (temp x)))
-
-(deep 'yolo)
-
-name
-
-
-(label subst 
+((label subst 
     (lambda (x y z)
         (cond 
             (
@@ -27,8 +14,6 @@ name
             )
         )
     )
-)
+))
 
 (subst 'a 'b '(b))
-
-// (subst nil nil '(a b (a b c) d))

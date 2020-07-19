@@ -32,7 +32,10 @@ impl<'a> Environment<'a> {
         match self.values.get(symbol) {
             Some(val) => Some(val.clone()),
             None => match &self.parent {
-                Some(parent) => parent.read().expect("cannot access environment parent").lookup(symbol),
+                Some(parent) => parent
+                    .read()
+                    .expect("cannot access environment parent")
+                    .lookup(symbol),
                 None => None,
             },
         }
@@ -76,7 +79,7 @@ pub enum Value<'a> {
 
     Function {
         params: Vec<Symbol>,
-        expression: Box<Expression<'a>>,
+        expressions: Vec<Expression<'a>>,
     },
 }
 
@@ -229,21 +232,27 @@ impl<'a> Expression<'a> {
                         }
                         Function {
                             params,
-                            mut expression,
+                            mut expressions,
                         } => {
                             for (symbol, arg_expr) in params.iter().zip(arguments.iter()) {
                                 // Note: because evaluating the argument expression requires
                                 // accessing the environment, it cannot be done while `get_env_mut`
                                 // is active (as the thread would deadlock).
                                 let arg_evaled = arg_expr.clone().eval();
-                                expression.get_env_mut().assign(symbol.clone(), arg_evaled);
+                                self.get_env_mut().assign(symbol.clone(), arg_evaled);
                             }
-                            expression.eval()
+                            let mut result = Expression::nil();
+                            for mut exp in expressions {
+                                result = exp.eval();
+                            }
+                            result
                         }
                         Label => {
-                            let sym_exp = arguments.get(0).expect("label requires an argument for the symbol").clone();
-                            let symbol = match sym_exp.into_value()
-                            {
+                            let sym_exp = arguments
+                                .get(0)
+                                .expect("label requires an argument for the symbol")
+                                .clone();
+                            let symbol = match sym_exp.into_value() {
                                 Symbol(sym) => sym,
                                 _ => panic!(
                                     "first arg of label must be a literal symbol (received `{}`)",
@@ -255,7 +264,8 @@ impl<'a> Expression<'a> {
                                 .expect(
                                     "label requires a second argument for the assigned expression",
                                 )
-                                .clone().eval();
+                                .clone()
+                                .eval();
                             self.get_env_mut().assign(symbol.clone(), expr.clone());
                             expr
                         }
@@ -335,7 +345,10 @@ impl<'a> fmt::Display for Value<'a> {
             Text(val) => write!(f, "<\"{}\">", val),
             Symbol(val) => write!(f, "{}", val),
             True => write!(f, "<true>"),
-            Function { params, expression } => write!(
+            Function {
+                params,
+                expressions,
+            } => write!(
                 f,
                 "<lambda {} -> {}>",
                 params
@@ -343,7 +356,11 @@ impl<'a> fmt::Display for Value<'a> {
                     .map(|x| format!("{}", x))
                     .collect::<Vec<String>>()
                     .join(" "),
-                expression
+                expressions
+                    .iter()
+                    .map(|x| format!("{}", x))
+                    .collect::<Vec<String>>()
+                    .join(" ")
             ),
             _ => write!(f, "<{}>", format!("{:?}", self).to_lowercase()),
         }

@@ -21,7 +21,7 @@ builtin = _{ quote | atom | eq | car | cdr | cons | cond | label }
 // Functions
 
 lambda_symbols = { "(" ~ symbol* ~ ")" }
-lambda = {"(" ~ "lambda" ~ lambda_symbols ~ expression ~ ")"}
+lambda = {"(" ~ "lambda" ~ lambda_symbols ~ expression+ ~ ")"}
 function = _{ lambda }
 
 // Sugar
