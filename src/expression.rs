@@ -132,7 +132,12 @@ impl<'a> Expression<'a> {
                             .get(0)
                             .expect("quote requires one argument")
                             .clone(),
-                        Atom => match arguments.get_mut(0).expect("atom requires one argument").eval().into_value() {
+                        Atom => match arguments
+                            .get_mut(0)
+                            .expect("atom requires one argument")
+                            .eval()
+                            .into_value()
+                        {
                             List(_) => Expression::new(Value::List(vec![]), self.env.clone()),
                             _ => Expression::new(Value::True, self.env.clone()),
                         },
@@ -196,7 +201,10 @@ impl<'a> Expression<'a> {
                                     vals.insert(0, first);
                                     Expression::new(List(vals), self.env.clone())
                                 }
-                                _ => panic!("cons expects a list, got `{}`", list),
+                                _ => panic!(
+                                    "cons expects a list as its second argument, got `{}`",
+                                    list
+                                ),
                             }
                         }
                         Cond => {
@@ -222,14 +230,16 @@ impl<'a> Expression<'a> {
                             }
                             panic!("none of cond was true");
                         }
-                        Function { params, mut expression } => {
+                        Function {
+                            params,
+                            mut expression,
+                        } => {
                             for (symbol, arg_expr) in params.iter().zip(arguments.iter()) {
                                 // Note: because evaluating the argument expression requires
                                 // accessing the environment, it cannot be done while `get_env_mut`
                                 // is active (as the thread would deadlock).
                                 let arg_evaled = arg_expr.clone().eval();
-                                expression.get_env_mut()
-                                    .assign(symbol.clone(), arg_evaled);
+                                expression.get_env_mut().assign(symbol.clone(), arg_evaled);
                             }
                             expression.eval()
                         }
