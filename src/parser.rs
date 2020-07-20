@@ -7,10 +7,10 @@ use std::sync::{Arc, RwLock};
 #[grammar = "syntax.pest"]
 pub struct SyntaxParser;
 
-pub fn parse(
+pub fn parse<'a>(
     source: &str,
-    env: Arc<RwLock<Environment>>,
-) -> Result<Vec<Expression>, pest::error::Error<Rule>> {
+    env: Arc<RwLock<Environment<'a>>>,
+) -> Result<Vec<Expression<'a>>, pest::error::Error<Rule>> {
     match SyntaxParser::parse(Rule::expressions, source) {
         Ok(pairs) => Ok(pairs
             .map(|pair| build_expression(pair, env.clone()))
@@ -19,7 +19,7 @@ pub fn parse(
     }
 }
 
-fn build_expression(pair: Pair<Rule>, env: Arc<RwLock<Environment>>) -> Expression {
+fn build_expression<'a>(pair: Pair<'_, Rule>, env: Arc<RwLock<Environment<'a>>>) -> Expression<'a> {
     Expression::new(
         match pair.as_rule() {
             Rule::list => Value::List(

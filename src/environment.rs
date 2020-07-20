@@ -5,13 +5,13 @@ use std::sync::{Arc, RwLock};
 use crate::{Expression, Operator, Symbol, Value};
 
 #[derive(Debug)]
-pub struct Environment {
-    values: HashMap<Symbol, Expression>,
+pub struct Environment<'a> {
+    values: HashMap<Symbol, Expression<'a>>,
     // This unreadable memory model might cause issues going forward
-    parent: Option<Arc<RwLock<Environment>>>,
+    parent: Option<Arc<RwLock<Environment<'a>>>>,
 }
 
-impl Environment {
+impl<'a> Environment<'a> {
     // TODO: see if this can be done without mutexes, at least for values
 
     pub fn root() -> Self {
@@ -28,7 +28,7 @@ impl Environment {
         }))
     }
 
-    fn get_literal(symbol: &Symbol) -> Option<Value> {
+    fn get_literal(symbol: &Symbol) -> Option<Value<'a>> {
         use Operator::*;
 
         match symbol.as_str() {
@@ -54,7 +54,7 @@ impl Environment {
         }
     }
 
-    pub fn lookup(&self, symbol: &Symbol) -> Option<Expression> {
+    pub fn lookup(&self, symbol: &Symbol) -> Option<Expression<'a>> {
         match self.values.get(symbol) {
             Some(val) => Some(val.clone()),
             None => match &self.parent {
@@ -70,12 +70,12 @@ impl Environment {
         }
     }
 
-    pub fn assign(&mut self, symbol: Symbol, exp: Expression) {
+    pub fn assign(&mut self, symbol: Symbol, exp: Expression<'a>) {
         self.values.insert(symbol, exp);
     }
 }
 
-impl fmt::Display for Environment {
+impl<'a> fmt::Display for Environment<'a> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,

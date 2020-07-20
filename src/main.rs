@@ -6,20 +6,18 @@ extern crate rustyline_derive;
 #[macro_use]
 extern crate pest_derive;
 
-use rustyline::config::Configurer;
 use rustyline::error::ReadlineError;
-use rustyline::{ColorMode, Editor};
+use rustyline::Editor;
 use rustyline_derive::{Completer, Helper, Highlighter, Hinter};
 
 pub mod environment;
+pub mod exceptions;
 pub mod expression;
 pub mod parser;
-pub mod exceptions;
 
 pub use environment::Environment;
-pub use expression::{Expression, Operator, Symbol, Value};
+pub use expression::{CallSnapshot, Expression, Operator, Symbol, Value};
 pub use parser::parse;
-#[macro_use]
 pub use exceptions::{Exception, ExceptionValue};
 use rustyline::validate::{ValidationContext, ValidationResult, Validator};
 
@@ -59,20 +57,20 @@ fn main() {
     }
 
     let helper = ReplHelper {};
-    rl.set_color_mode(ColorMode::Forced);
     rl.set_helper(Some(helper));
 
+
     loop {
-        let readline = rl.readline("🐢 > ");
-        match readline {
+        match rl.readline("🐢 > ") {
             Ok(line) => {
                 rl.add_history_entry(line.as_str());
                 match parser::parse(line.as_str(), env.clone()) {
                     Ok(mut values) => {
                         for value in &mut values {
-                            match value.eval() {
+                            let snapshot = CallSnapshot::root(&value.clone());
+                            match value.eval(snapshot) {
                                 Ok(result) => println!("   = {:#}", result),
-                                Err(error) => eprintln!("error: {:?}", error),
+                                Err(_error) => eprintln!("error!!!"),
                             }
                         }
                     }

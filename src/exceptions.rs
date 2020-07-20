@@ -1,15 +1,16 @@
-use crate::{Expression, Symbol};
+use crate::{CallSnapshot, Symbol};
+use std::sync::{Arc, RwLock};
 
 #[macro_export]
 macro_rules! exp {
     ($value:expr) => {
         return Err(Exception::new($value, None, None));
     };
-    ($value:expr, $expr:expr) => {
-        return Err(Exception::new($value, Some($expr), None));
+    ($value:expr, $snapshot:expr) => {
+        return Err(Exception::new($value, Some($snapshot.clone()), None));
     };
-    ($value:expr, $expr:expr, $note:expr) => {
-        return Err(Exception::new($value, Some($expr), Some($note)));
+    ($value:expr, $snapshot:expr, $note:expr) => {
+        return Err(Exception::new($value, Some($snapshot.clone()), Some($note)));
     };
 }
 
@@ -30,19 +31,23 @@ pub enum ExceptionValue {
     ArgumentMismatch,
 }
 
-#[derive(Debug, Clone)]
-pub struct Exception {
-    expression: Option<Expression>,
+#[derive(Clone)]
+pub struct Exception<'a> {
     value: ExceptionValue,
+    snapshot: Option<Arc<RwLock<CallSnapshot<'a>>>>,
     note: Option<String>,
 }
 
-impl Exception {
-    pub fn new(value: ExceptionValue, expression: Option<Expression>, note: Option<String>) -> Self {
+impl<'a> Exception<'a> {
+    pub fn new(
+        value: ExceptionValue,
+        snapshot: Option<Arc<RwLock<CallSnapshot<'a>>>>,
+        note: Option<String>,
+    ) -> Self {
         Exception {
-            expression,
             value,
-            note
+            snapshot,
+            note,
         }
     }
 }
