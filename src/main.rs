@@ -17,15 +17,15 @@ pub mod environment;
 pub mod exceptions;
 pub mod expression;
 pub mod parser;
-pub mod source;
 pub mod resolver;
+pub mod source;
 
 pub use call_snapshot::CallSnapshot;
-pub use resolver::resolve_resource;
 pub use environment::Environment;
 pub use exceptions::{Exception, ExceptionValue};
 pub use expression::{Expression, Keyword, Operator, Symbol, Value};
 pub use parser::parse;
+pub use resolver::resolve_resource;
 use rustyline::validate::{ValidationContext, ValidationResult, Validator};
 pub use source::{Source, SourcePosition};
 

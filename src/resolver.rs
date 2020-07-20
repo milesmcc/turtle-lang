@@ -62,11 +62,7 @@ pub fn resolve_resource<'a>(
         ),
     };
 
-    let parsed = parse(
-        &content,
-        &path.to_string(),
-        via.clone_env(),
-    )?;
+    let parsed = parse(&content, &path.to_string(), via.clone_env())?;
 
     let mut return_val = Expression::nil();
     for mut exp in parsed {

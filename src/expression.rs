@@ -1,7 +1,10 @@
 use std::fmt;
 use std::sync::{Arc, RwLock, RwLockReadGuard, RwLockWriteGuard};
 
-use crate::{exp, CallSnapshot, Environment, Exception, ExceptionValue as EV, SourcePosition, resolve_resource};
+use crate::{
+    exp, resolve_resource, CallSnapshot, Environment, Exception, ExceptionValue as EV,
+    SourcePosition,
+};
 
 #[derive(Debug, Clone, PartialEq, PartialOrd, Eq, Hash)]
 pub struct Symbol(String);
@@ -483,11 +486,14 @@ impl Operator {
                     val => exp!(
                         EV::InvalidArgument,
                         snapshot,
-                        format!("include requires the path (:text) as its argument (got `{}` instead)", val)
+                        format!(
+                            "include requires the path (:text) as its argument (got `{}` instead)",
+                            val
+                        )
                     ),
                 };
 
-                resolve_resource(&path, snapshot, expr)                
+                resolve_resource(&path, snapshot, expr)
             }
         }
     }

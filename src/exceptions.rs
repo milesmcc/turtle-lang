@@ -62,7 +62,7 @@ impl ExceptionValue {
             ArgumentMismatch => Keyword::from_str("argument-mismatch-exp"),
             Syntax => Keyword::from_str("syntax-exp"),
             InvalidArgument => Keyword::from_str("invalid-argument-exp"),
-            InvalidIncludePath(_) => Keyword::from_str("invalid-include-path-exp")
+            InvalidIncludePath(_) => Keyword::from_str("invalid-include-path-exp"),
         }
     }
 }
@@ -151,13 +151,16 @@ impl fmt::Display for Exception<'_> {
             f,
             "      {}{}",
             Color::Blue.bold().paint("└ "),
-            Style::new()
-                .bold()
-                .paint(self.value.explain()),
+            Style::new().bold().paint(self.value.explain()),
         )?;
 
         match &self.note {
-            Some(note) => write!(f, "\n        {} {}", Style::new().dimmed().paint("note:"), note),
+            Some(note) => write!(
+                f,
+                "\n        {} {}",
+                Style::new().dimmed().paint("note:"),
+                note
+            ),
             None => write!(f, ""),
         }
     }
