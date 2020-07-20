@@ -2,7 +2,7 @@ use std::fmt;
 use std::sync::{Arc, RwLock, RwLockReadGuard, RwLockWriteGuard};
 
 use crate::parser::Rule;
-use crate::{exp, Environment, Exception, ExceptionValue as EV, Source, SourcePosition};
+use crate::{exp, Environment, Exception, ExceptionValue as EV, Source, SourcePosition, CallSnapshot};
 use ansi_term::{Color, Style};
 use pest::iterators::Pair;
 
@@ -60,30 +60,6 @@ pub enum Operator {
     Disp,
 }
 
-pub struct CallSnapshot<'a> {
-    parent: Option<Arc<RwLock<Self>>>,
-    expression: Expression<'a>,
-}
-
-impl<'a> CallSnapshot<'a> {
-    pub fn root(exp: &Expression<'a>) -> Arc<RwLock<Self>> {
-        Arc::new(RwLock::new(CallSnapshot {
-            parent: None,
-            expression: exp.clone(),
-        }))
-    }
-
-    pub fn new(exp: &Expression<'a>, parent: &Arc<RwLock<Self>>) -> Arc<RwLock<Self>> {
-        Arc::new(RwLock::new(CallSnapshot {
-            parent: Some(parent.clone()),
-            expression: exp.clone(),
-        }))
-    }
-
-    pub fn expression(&self) -> &'_ Expression<'a> {
-        &self.expression
-    }
-}
 
 #[derive(Debug, Clone, PartialEq, PartialOrd)]
 pub enum Value<'a> {
