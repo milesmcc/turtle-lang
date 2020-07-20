@@ -1,16 +1,9 @@
-use crate::{exp, parse, CallSnapshot, Exception, ExceptionValue as EV, Expression};
+use crate::{exp, parse, CallSnapshot, Exception, ExceptionValue as EV, Expression, stdlib};
 use relative_path::RelativePath;
 use std::env;
 use std::fs;
 use std::path::PathBuf;
 use std::sync::{Arc, RwLock};
-
-fn get_std_resource(path: &str) -> Option<String> {
-    match path {
-        "@prelude" => Some(include_str!("prelude.lisp").to_string()),
-        _ => None,
-    }
-}
 
 pub fn resolve_resource<'a>(
     path: &str,
@@ -18,7 +11,7 @@ pub fn resolve_resource<'a>(
     via: &Expression<'a>,
 ) -> Result<Expression<'a>, Exception<'a>> {
     let content = match path.starts_with('@') {
-        true => match get_std_resource(path) {
+        true => match stdlib::get_std_resource(path) {
             Some(val) => val,
             None => exp!(
                 EV::InvalidIncludePath(String::from(path)),
