@@ -79,9 +79,7 @@ impl fmt::Display for SourcePosition {
                         format!(
                             "{}{}{}",
                             &line[0..inner_start_pos as usize],
-                            Style::new()
-                                .italic()
-                                .underline()
+                            Color::Purple
                                 .paint(&line[inner_start_pos as usize..inner_end_pos as usize]),
                             &line[inner_end_pos..]
                         ),
@@ -93,40 +91,31 @@ impl fmt::Display for SourcePosition {
         fn indent(n: usize) -> String {
             String::from_utf8(vec![b' '; n]).unwrap()
         }
-        let indentation = format!("{}", line_number).len() + 2;
+
+        let mut indentation = format!("{}", line_number).len() + 2;
+        if indentation < 6 {
+            indentation = 6;
+        }
 
         writeln!(
             f,
-            "{}{} {}:{}",
-            indent(indentation - 1),
-            Color::Blue.bold().paint("-->"),
-            source.location,
-            line_number
-        )?;
-        writeln!(
-            f,
-            "{}{}",
+            "{}{} {}",
             indent(indentation),
-            Color::Blue.bold().paint("|")
+            Color::Blue.bold().paint("┌"),
+            Style::default().dimmed().paint(format!("{}:{}", source.location, line_number)),
         )?;
 
         for (line_no, line) in relevant_lines_formatted {
             let line_no_str = format!("{}", line_no);
             let line_no_indentation = indent(indentation - line_no_str.len() - 1);
-            writeln!(
+            write!(
                 f,
                 "{}{} {}",
                 line_no_indentation,
-                Color::Blue.bold().paint(format!("{} |", line_no_str)),
+                Color::Blue.bold().paint(format!("{} │", line_no_str)),
                 line
             )?;
         }
-
-        write!(
-            f,
-            "{}{}",
-            indent(indentation),
-            Color::Blue.bold().paint("|")
-        )
+        write!(f, "")
     }
 }

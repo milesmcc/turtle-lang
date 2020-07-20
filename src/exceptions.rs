@@ -113,9 +113,7 @@ impl fmt::Display for Exception<'_> {
             f,
             "{}{} {}",
             Color::Red.bold().paint("error"),
-            Style::new()
-                .bold()
-                .paint(format!(": {}", self.value.explain())),
+            Style::new().paint(": uncaught exception"),
             Color::Yellow.paint(format!("{}", self.value.keyword()))
         )?;
 
@@ -124,7 +122,7 @@ impl fmt::Display for Exception<'_> {
                 Ok(snapshot) => match snapshot.expression().source() {
                     Some(source) => {
                         // TODO: print the snapshot instead (include call stack)
-                        write!(f, "{}", source)?;
+                        writeln!(f, "{}", source)?;
                     }
                     None => {}
                 },
@@ -146,8 +144,17 @@ impl fmt::Display for Exception<'_> {
             writeln!(f, "{}", addl_source)?;
         }
 
+        write!(
+            f,
+            "      {}{}",
+            Color::Blue.bold().paint("└ "),
+            Style::new()
+                .bold()
+                .paint(format!("{}", self.value.explain())),
+        )?;
+
         match &self.note {
-            Some(note) => writeln!(f, "{}: {}", Style::new().bold().paint("note"), note),
+            Some(note) => write!(f, "\n{}: {}", Style::new().bold().paint("note"), note),
             None => write!(f, ""),
         }
     }
