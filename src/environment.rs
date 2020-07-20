@@ -31,7 +31,7 @@ impl<'a> Environment<'a> {
     fn get_literal(symbol: &Symbol) -> Option<Value<'a>> {
         use Operator::*;
 
-        match symbol.as_str() {
+        match symbol.string_value().as_str() {
             "nil" => Some(Value::List(vec![])),
             "t" => Some(Value::True),
             "quote" => Some(Value::Operator(Quote)),
