@@ -111,23 +111,18 @@ impl fmt::Display for Exception<'_> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         writeln!(
             f,
-            "{}{} {}",
+            "{}{}{} {}",
             Color::Red.bold().paint("error"),
-            Style::new().paint(": uncaught exception"),
+            Color::Blue.bold().paint(" ┬ "),
+            Style::new().paint("uncaught exception"),
             Color::Yellow.paint(format!("{}", self.value.keyword()))
         )?;
 
         match &self.snapshot {
             Some(snapshot_lock) => match snapshot_lock.read() {
-                Ok(snapshot) => match snapshot.expression().source() {
-                    Some(source) => {
-                        // TODO: print the snapshot instead (include call stack)
-                        writeln!(f, "{}", source)?;
-                    }
-                    None => {}
-                },
+                Ok(snapshot) => write!(f, "{}", snapshot)?,
                 Err(_) => {
-                    writeln!(
+                    write!(
                         f,
                         "{}{}",
                         Color::Yellow.bold().paint("warning"),
@@ -141,7 +136,7 @@ impl fmt::Display for Exception<'_> {
         };
 
         for addl_source in &self.additional_sources {
-            writeln!(f, "{}", addl_source)?;
+            write!(f, "{}", addl_source)?;
         }
 
         write!(
@@ -154,7 +149,7 @@ impl fmt::Display for Exception<'_> {
         )?;
 
         match &self.note {
-            Some(note) => write!(f, "\n{}: {}", Style::new().bold().paint("note"), note),
+            Some(note) => write!(f, "{}: {}", Style::new().bold().paint("note"), note),
             None => write!(f, ""),
         }
     }

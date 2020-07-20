@@ -40,7 +40,7 @@ fn build_expression<'a>(
     env: Arc<RwLock<Environment<'a>>>,
     source: Arc<RwLock<Source>>,
 ) -> Result<Expression<'a>, Exception<'a>> {
-    let _pos = SourcePosition::new(
+    let pos = SourcePosition::new(
         pair.as_span().start_pos().pos(),
         pair.as_span().end_pos().pos(),
         source.clone(),
@@ -59,15 +59,17 @@ fn build_expression<'a>(
         Rule::symbol => Ok(Expression::new(
             Value::Symbol(Symbol::new(String::from(pair.as_str()))),
             env.clone(),
-        )),
+        )
+        .with_source(pos.clone())),
         Rule::keyword => Ok(Expression::new(
             Value::Keyword(Keyword::new(String::from(
                 pair.into_inner().next().unwrap().as_str(),
             ))),
             env.clone(),
-        )),
+        )
+        .with_source(pos.clone())),
         Rule::number => match pair.as_str().parse::<f64>() {
-            Ok(num) => Ok(Expression::new(Value::Number(num), env.clone())),
+            Ok(num) => Ok(Expression::new(Value::Number(num), env.clone()).with_source(pos)),
             Err(_) => Err(Exception::new(
                 EV::Syntax,
                 None,
@@ -104,7 +106,8 @@ fn build_expression<'a>(
                     expressions,
                 },
                 env,
-            ))
+            )
+            .with_source(pos.clone()))
         }
 
         // Sugar

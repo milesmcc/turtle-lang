@@ -101,14 +101,16 @@ impl fmt::Display for SourcePosition {
             f,
             "{}{} {}",
             indent(indentation),
-            Color::Blue.bold().paint("┌"),
-            Style::default().dimmed().paint(format!("{}:{}", source.location, line_number)),
+            Color::Blue.bold().paint("├"),
+            Style::default()
+                .dimmed()
+                .paint(format!("{}:{} ↴", source.location, line_number)),
         )?;
 
         for (line_no, line) in relevant_lines_formatted {
             let line_no_str = format!("{}", line_no);
             let line_no_indentation = indent(indentation - line_no_str.len() - 1);
-            write!(
+            writeln!(
                 f,
                 "{}{} {}",
                 line_no_indentation,
