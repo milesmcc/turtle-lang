@@ -1,7 +1,7 @@
 use std::fmt;
 use std::sync::{Arc, RwLock, RwLockReadGuard, RwLockWriteGuard};
 
-use crate::{exp, CallSnapshot, Environment, Exception, ExceptionValue as EV, SourcePosition};
+use crate::{exp, CallSnapshot, Environment, Exception, ExceptionValue as EV, SourcePosition, resolve_resource};
 
 #[derive(Debug, Clone, PartialEq, PartialOrd, Eq, Hash)]
 pub struct Symbol(String);
@@ -55,6 +55,7 @@ pub enum Operator {
     Ge,
     Type,
     Disp,
+    Include,
 }
 
 #[derive(Debug, Clone, PartialEq, PartialOrd)]
@@ -129,6 +130,10 @@ impl<'a> Expression<'a> {
             env: Arc::new(RwLock::new(Environment::root())),
             source: None,
         }
+    }
+
+    pub fn clone_env(&self) -> Arc<RwLock<Environment<'a>>> {
+        self.env.clone()
     }
 
     pub fn t() -> Self {
@@ -465,6 +470,25 @@ impl Operator {
                 }
                 Ok(Expression::nil())
             }
+            Include => {
+                if arguments.len() != 1 {
+                    exp!(
+                        EV::ArgumentMismatch,
+                        snapshot,
+                        format!("include requires 1 argument (received {})", arguments.len())
+                    );
+                }
+                let path = match arguments.get_mut(0).unwrap().eval(snap())?.value {
+                    Text(val) => val,
+                    val => exp!(
+                        EV::InvalidArgument,
+                        snapshot,
+                        format!("include requires the path (:text) as its argument (got `{}` instead)", val)
+                    ),
+                };
+
+                resolve_resource(&path, snapshot, expr)                
+            }
         }
     }
 }
@@ -510,7 +534,7 @@ impl<'a> fmt::Display for Value<'a> {
                 ),
             },
             Number(val) => write!(f, "{}", val),
-            Text(val) => write!(f, "<\"{}\">", val),
+            Text(val) => write!(f, "\"{}\"", val),
             Symbol(val) => write!(f, "{}", val),
             Keyword(val) => write!(f, "{}", val),
             True => write!(f, "true"),

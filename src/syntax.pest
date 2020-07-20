@@ -6,8 +6,14 @@ list = { "(" ~ expression* ~ ")" }
 symbol = @{ (LETTER | NUMBER | SYMBOL | DASH_PUNCTUATION)+ }
 keyword = { ":" ~ symbol }
 number = @{ "-"? ~ (ASCII_DIGIT)+ ~ ("." ~ ASCII_DIGIT+)? ~ (^"e" ~ ("+" | "-")? ~ ASCII_DIGIT+)? }
+char = {
+    !("\"" | "\\") ~ ANY
+    | "\\" ~ ("\"" | "\\" | "/" | "b" | "f" | "n" | "r" | "t")
+    | "\\" ~ ("u" ~ ASCII_HEX_DIGIT{4})
+}
+text = { "\"" ~ char* ~ "\"" }
 
-primitive = _{ list | keyword | number | symbol }
+primitive = _{ list | keyword | text | number | symbol }
 
 // Functions
 lambda_symbols = { "(" ~ symbol* ~ ")" }

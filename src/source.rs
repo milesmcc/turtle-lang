@@ -39,6 +39,13 @@ impl SourcePosition {
             source.clone(),
         )
     }
+
+    pub fn location(&self) -> Option<String> {
+        match self.text.read() {
+            Ok(text) => Some(text.location.clone()),
+            Err(_) => None
+        }
+    }
 }
 
 impl fmt::Display for SourcePosition {

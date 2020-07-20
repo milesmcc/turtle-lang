@@ -29,10 +29,12 @@ macro_rules! exp_opt {
 
 #[derive(Debug, Clone)]
 pub enum ExceptionValue {
-    Other(String),
+    Other(String, Keyword),
     UndefinedSymbol(Symbol),
     ArgumentMismatch,
+    InvalidArgument,
     Syntax,
+    InvalidIncludePath(String),
 }
 
 impl ExceptionValue {
@@ -40,22 +42,28 @@ impl ExceptionValue {
         use ExceptionValue::*;
 
         match self {
-            Other(val) => val.clone(),
+            Other(val, _) => val.clone(),
             UndefinedSymbol(symbol) => format!("the symbol `{}` has no assigned value", symbol),
-            ArgumentMismatch => String::from("the arguments to this function are invalid"),
+            ArgumentMismatch => {
+                String::from("this function requires a different number of arguments")
+            }
+            InvalidArgument => String::from("the arguments to this function are invalid"),
             Syntax => String::from("the syntax of this code is incorrect"),
+            InvalidIncludePath(path) => format!("no code is available for import from `{}`", path),
         }
     }
 
     pub fn keyword(&self) -> Keyword {
         use ExceptionValue::*;
 
-        Keyword::from_str(match self {
-            Other(_) => "other-exp",
-            UndefinedSymbol(_) => "undefined-symbol-exp",
-            ArgumentMismatch => "argument-mismatch-exp",
-            Syntax => "syntax-exp",
-        })
+        match self {
+            Other(_, keyword) => keyword.clone(),
+            UndefinedSymbol(_) => Keyword::from_str("undefined-symbol-exp"),
+            ArgumentMismatch => Keyword::from_str("argument-mismatch-exp"),
+            Syntax => Keyword::from_str("syntax-exp"),
+            InvalidArgument => Keyword::from_str("invalid-argument-exp"),
+            InvalidIncludePath(_) => Keyword::from_str("invalid-include-path-exp")
+        }
     }
 }
 
@@ -145,11 +153,11 @@ impl fmt::Display for Exception<'_> {
             Color::Blue.bold().paint("└ "),
             Style::new()
                 .bold()
-                .paint(format!("{}", self.value.explain())),
+                .paint(self.value.explain()),
         )?;
 
         match &self.note {
-            Some(note) => write!(f, "{}: {}", Style::new().bold().paint("note"), note),
+            Some(note) => write!(f, "\n        {} {}", Style::new().dimmed().paint("note:"), note),
             None => write!(f, ""),
         }
     }

@@ -76,6 +76,10 @@ fn build_expression<'a>(
                 Some(format!("`{}` is not a valid number", pair.as_str())),
             )),
         },
+        Rule::text => Ok(Expression::new(
+            Value::Text(pair.into_inner().as_str().to_string()),
+            env.clone(),
+        )),
         Rule::lambda => {
             let child_env = Environment::with_parent(env.clone());
             let mut inner = pair.into_inner();

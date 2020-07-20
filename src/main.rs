@@ -6,6 +6,7 @@ extern crate rustyline;
 extern crate rustyline_derive;
 #[macro_use]
 extern crate pest_derive;
+extern crate relative_path;
 
 use rustyline::error::ReadlineError;
 use rustyline::Editor;
@@ -17,8 +18,10 @@ pub mod exceptions;
 pub mod expression;
 pub mod parser;
 pub mod source;
+pub mod resolver;
 
 pub use call_snapshot::CallSnapshot;
+pub use resolver::resolve_resource;
 pub use environment::Environment;
 pub use exceptions::{Exception, ExceptionValue};
 pub use expression::{Expression, Keyword, Operator, Symbol, Value};
