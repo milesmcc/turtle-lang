@@ -3,7 +3,7 @@ use crate::{
     SourcePosition, Symbol, Value,
 };
 use pest::iterators::Pair;
-use pest::{Parser, Position};
+use pest::Parser;
 use std::sync::{Arc, RwLock};
 
 #[derive(Parser)]
@@ -40,7 +40,7 @@ fn build_expression<'a>(
     env: Arc<RwLock<Environment<'a>>>,
     source: Arc<RwLock<Source>>,
 ) -> Result<Expression<'a>, Exception<'a>> {
-    let pos = SourcePosition::new(
+    let _pos = SourcePosition::new(
         pair.as_span().start_pos().pos(),
         pair.as_span().end_pos().pos(),
         source.clone(),

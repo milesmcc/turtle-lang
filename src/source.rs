@@ -1,8 +1,8 @@
-use std::sync::{Arc, RwLock};
 use crate::parser::Rule;
+use ansi_term::{Color, Style};
 use pest::iterators::Pair;
 use std::fmt;
-use ansi_term::{Color, Style};
+use std::sync::{Arc, RwLock};
 
 #[derive(Debug, Clone)]
 pub struct Source {
@@ -53,7 +53,8 @@ impl fmt::Display for SourcePosition {
                 .fold(0, |acc, c| match c == '\n' {
                     true => acc + 1,
                     false => acc,
-                }) + 1;
+                })
+                + 1;
 
         let lines = source.text.split('\n');
 
@@ -101,13 +102,13 @@ impl fmt::Display for SourcePosition {
             Color::Blue.bold().paint("-->"),
             source.location,
             line_number
-        );
+        )?;
         writeln!(
             f,
             "{}{}",
             indent(indentation),
             Color::Blue.bold().paint("|")
-        );
+        )?;
 
         for (line_no, line) in relevant_lines_formatted {
             let line_no_str = format!("{}", line_no);
@@ -118,7 +119,7 @@ impl fmt::Display for SourcePosition {
                 line_no_indentation,
                 Color::Blue.bold().paint(format!("{} |", line_no_str)),
                 line
-            );
+            )?;
         }
 
         write!(

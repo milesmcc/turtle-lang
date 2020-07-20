@@ -1,10 +1,7 @@
 use std::fmt;
 use std::sync::{Arc, RwLock, RwLockReadGuard, RwLockWriteGuard};
 
-use crate::parser::Rule;
-use crate::{exp, Environment, Exception, ExceptionValue as EV, Source, SourcePosition, CallSnapshot};
-use ansi_term::{Color, Style};
-use pest::iterators::Pair;
+use crate::{exp, CallSnapshot, Environment, Exception, ExceptionValue as EV, SourcePosition};
 
 #[derive(Debug, Clone, PartialEq, PartialOrd, Eq, Hash)]
 pub struct Symbol(String);
@@ -59,7 +56,6 @@ pub enum Operator {
     Type,
     Disp,
 }
-
 
 #[derive(Debug, Clone, PartialEq, PartialOrd)]
 pub enum Value<'a> {

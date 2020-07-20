@@ -11,23 +11,20 @@ use rustyline::error::ReadlineError;
 use rustyline::Editor;
 use rustyline_derive::{Completer, Helper, Highlighter, Hinter};
 
+pub mod call_snapshot;
 pub mod environment;
 pub mod exceptions;
 pub mod expression;
 pub mod parser;
 pub mod source;
-pub mod call_snapshot;
 
+pub use call_snapshot::CallSnapshot;
 pub use environment::Environment;
 pub use exceptions::{Exception, ExceptionValue};
-pub use expression::{
-    Expression, Keyword, Operator, Symbol,
-    Value,
-};
-pub use call_snapshot::CallSnapshot;
-pub use source::{Source, SourcePosition};
+pub use expression::{Expression, Keyword, Operator, Symbol, Value};
 pub use parser::parse;
 use rustyline::validate::{ValidationContext, ValidationResult, Validator};
+pub use source::{Source, SourcePosition};
 
 #[derive(Completer, Helper, Highlighter, Hinter)]
 struct ReplHelper {}

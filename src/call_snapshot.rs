@@ -1,6 +1,7 @@
-use std::sync::{Arc, RwLock};
 use crate::Expression;
+use std::sync::{Arc, RwLock};
 
+#[derive(Debug, Clone)]
 pub struct CallSnapshot<'a> {
     parent: Option<Arc<RwLock<Self>>>,
     expression: Expression<'a>,

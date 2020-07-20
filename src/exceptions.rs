@@ -65,7 +65,7 @@ impl fmt::Display for ExceptionValue {
     }
 }
 
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 pub struct Exception<'a> {
     value: ExceptionValue,
     snapshot: Option<Arc<RwLock<CallSnapshot<'a>>>>,
@@ -92,7 +92,7 @@ impl From<pest::error::Error<parser::Rule>> for Exception<'_> {
     fn from(err: pest::error::Error<parser::Rule>) -> Self {
         use pest::error::InputLocation::*;
 
-        let (start, end) = match err.location {
+        let (_start, _end) = match err.location {
             Pos(start) => (start, start),
             Span((start, end)) => (start, end),
         };
@@ -117,14 +117,14 @@ impl fmt::Display for Exception<'_> {
                 .bold()
                 .paint(format!(": {}", self.value.explain())),
             Color::Yellow.paint(format!("{}", self.value.keyword()))
-        );
+        )?;
 
         match &self.snapshot {
             Some(snapshot_lock) => match snapshot_lock.read() {
                 Ok(snapshot) => match snapshot.expression().source() {
                     Some(source) => {
                         // TODO: print the snapshot instead (include call stack)
-                        write!(f, "{}", source);
+                        write!(f, "{}", source)?;
                     }
                     None => {}
                 },
@@ -136,19 +136,21 @@ impl fmt::Display for Exception<'_> {
                         Style::new()
                             .bold()
                             .paint(": unable to access execution snapshot (are threads locked?)")
-                    );
+                    )?;
                 }
             },
             None => {}
         };
 
         for addl_source in &self.additional_sources {
-            writeln!(f, "{}", addl_source);
+            writeln!(f, "{}", addl_source)?;
         }
 
         match &self.note {
             Some(note) => writeln!(f, "{}: {}", Style::new().bold().paint("note"), note),
-            None => {write!(f, "")},
+            None => write!(f, ""),
         }
     }
 }
+
+impl Error for Exception<'_> {}
