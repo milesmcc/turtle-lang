@@ -70,7 +70,7 @@ impl fmt::Display for SourcePosition {
         let mut chars_seen = 0;
         for (i, line) in lines.enumerate() {
             let eol_pos = chars_seen + line.len() + 1;
-            if self.start_pos <= eol_pos && self.end_pos >= chars_seen {
+            if self.start_pos < eol_pos && self.end_pos > chars_seen {
                 let mut inner_start_pos: isize = self.start_pos as isize - chars_seen as isize;
                 if inner_start_pos < 0 {
                     inner_start_pos = 0;
