@@ -15,13 +15,15 @@ pub mod environment;
 pub mod exceptions;
 pub mod expression;
 pub mod parser;
+pub mod source;
 
 pub use environment::Environment;
 pub use exceptions::{Exception, ExceptionValue};
 pub use expression::{
-    CallSnapshot, Expression, Keyword, Operator, Source, SourcePosition, Symbol,
+    CallSnapshot, Expression, Keyword, Operator, Symbol,
     Value,
 };
+pub use source::{Source, SourcePosition};
 pub use parser::parse;
 use rustyline::validate::{ValidationContext, ValidationResult, Validator};
 
