@@ -1,5 +1,6 @@
 use std::sync::{Arc, RwLock};
 
+extern crate ansi_term;
 extern crate pest;
 extern crate rustyline;
 extern crate rustyline_derive;
@@ -16,9 +17,12 @@ pub mod expression;
 pub mod parser;
 
 pub use environment::Environment;
-pub use expression::{CallSnapshot, Expression, Operator, Symbol, Value};
-pub use parser::parse;
 pub use exceptions::{Exception, ExceptionValue};
+pub use expression::{
+    CallSnapshot, Expression, Keyword, Operator, Source, SourcePosition, Symbol,
+    Value,
+};
+pub use parser::parse;
 use rustyline::validate::{ValidationContext, ValidationResult, Validator};
 
 #[derive(Completer, Helper, Highlighter, Hinter)]
@@ -59,18 +63,17 @@ fn main() {
     let helper = ReplHelper {};
     rl.set_helper(Some(helper));
 
-
     loop {
         match rl.readline("🐢 > ") {
             Ok(line) => {
                 rl.add_history_entry(line.as_str());
-                match parser::parse(line.as_str(), env.clone()) {
+                match parser::parse(line.as_str(), "<stdin>", env.clone()) {
                     Ok(mut values) => {
                         for value in &mut values {
                             let snapshot = CallSnapshot::root(&value.clone());
                             match value.eval(snapshot) {
                                 Ok(result) => println!("   = {:#}", result),
-                                Err(_error) => eprintln!("error!!!"),
+                                Err(error) => eprintln!("{}", error),
                             }
                         }
                     }
