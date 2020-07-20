@@ -42,8 +42,8 @@ impl ExceptionValue {
         match self {
             Other(val) => val.clone(),
             UndefinedSymbol(symbol) => format!("the symbol `{}` has no assigned value", symbol),
-            ArgumentMismatch => format!("the arguments to this function are invalid"),
-            Syntax => format!("the syntax of this code is incorrect"),
+            ArgumentMismatch => String::from("the arguments to this function are invalid"),
+            Syntax => String::from("the syntax of this code is incorrect"),
         }
     }
 

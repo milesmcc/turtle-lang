@@ -88,7 +88,7 @@ impl<'a> fmt::Display for Environment<'a> {
                 .join("\n"),
             match &self.parent {
                 Some(parent) => format!("{}", parent.read().expect("cannot get parent")),
-                None => format!("env has no parent"),
+                None => String::from("env has no parent"),
             }
         )
     }

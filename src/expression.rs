@@ -112,8 +112,8 @@ impl<'a> PartialEq for Expression<'a> {
 impl<'a> Expression<'a> {
     pub fn new(value: Value<'a>, env: Arc<RwLock<Environment<'a>>>) -> Self {
         Self {
-            value: value,
-            env: env,
+            value,
+            env,
             source: None,
         }
     }
@@ -163,7 +163,7 @@ impl<'a> Expression<'a> {
 
         match self.value.clone() {
             List(vals) => {
-                if vals.len() > 0 {
+                if !vals.is_empty() {
                     let mut operator = vals.get(0).unwrap().clone();
                     let arguments: Vec<Expression<'a>> = vals.iter().skip(1).cloned().collect();
                     match operator.value {
@@ -268,7 +268,7 @@ impl Operator {
                     .eval(snap())?;
                 match (first.into_value(), second.into_value()) {
                     (List(l1), List(l2)) => {
-                        if l1.len() == 0 && l2.len() == 0 {
+                        if l1.is_empty() && l2.is_empty() {
                             Ok(Expression::t())
                         } else {
                             Ok(Expression::nil())
@@ -300,7 +300,7 @@ impl Operator {
                     .eval(snapshot)?;
                 match list.value {
                     List(mut vals) => {
-                        if vals.len() > 0 {
+                        if !vals.is_empty() {
                             vals.remove(0);
                         }
                         Ok(Expression::new(List(vals), expr.env.clone()))
@@ -353,8 +353,7 @@ impl Operator {
                     .expect("label requires a second argument for the assigned expression")
                     .clone()
                     .eval(snap())?;
-                expr.get_env_mut()
-                    .assign(symbol.clone(), assigned_expr.clone());
+                expr.get_env_mut().assign(symbol, assigned_expr.clone());
                 Ok(assigned_expr)
             }
             Sum => {
