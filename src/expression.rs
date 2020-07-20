@@ -1,11 +1,44 @@
 use std::fmt;
 use std::sync::{Arc, RwLock, RwLockReadGuard, RwLockWriteGuard};
 
-use crate::exp; // macro
-use crate::{Environment, Exception, ExceptionValue as EV};
+use crate::parser::Rule;
+use crate::{exp, Environment, Exception, ExceptionValue as EV};
+use ansi_term::{Color, Style};
 use pest::iterators::Pair;
 
-pub type Symbol = String;
+#[derive(Debug, Clone, PartialEq, PartialOrd, Eq, Hash)]
+pub struct Symbol(String);
+
+impl Symbol {
+    pub fn new(val: String) -> Self {
+        Self(val)
+    }
+
+    pub fn from_str(val: &str) -> Self {
+        Self(String::from(val))
+    }
+
+    pub fn string_value(&self) -> &'_ String {
+        &self.0
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, PartialOrd, Eq, Hash)]
+pub struct Keyword(String);
+
+impl Keyword {
+    pub fn new(val: String) -> Self {
+        Self(val)
+    }
+
+    pub fn from_str(val: &str) -> Self {
+        Self(String::from(val))
+    }
+
+    pub fn string_value(&self) -> &'_ String {
+        &self.0
+    }
+}
 
 #[derive(Debug, Clone)]
 pub struct Source {
@@ -13,11 +46,124 @@ pub struct Source {
     location: String,
 }
 
+impl Source {
+    pub fn new(text: String, location: String) -> Self {
+        Self { text, location }
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct SourcePosition {
     start_pos: usize,
     end_pos: usize,
     text: Arc<RwLock<Source>>,
+}
+
+impl SourcePosition {
+    pub fn new(start_pos: usize, end_pos: usize, text: Arc<RwLock<Source>>) -> Self {
+        Self {
+            start_pos,
+            end_pos,
+            text,
+        }
+    }
+
+    pub fn from_pair(pair: &Pair<'_, Rule>, source: &Arc<RwLock<Source>>) -> Self {
+        Self::new(
+            pair.as_span().start_pos().pos(),
+            pair.as_span().end_pos().pos(),
+            source.clone(),
+        )
+    }
+}
+
+impl fmt::Display for SourcePosition {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let source = match self.text.read() {
+            Ok(text) => text,
+            Err(_) => return Err(fmt::Error),
+        };
+        let line_number =
+            &source.text[0..self.start_pos]
+                .chars()
+                .fold(0, |acc, c| match c == '\n' {
+                    true => acc + 1,
+                    false => acc,
+                }) + 1;
+
+        let lines = source.text.split('\n');
+
+        let mut relevant_lines_formatted: Vec<(usize, String)> = Vec::new();
+
+        let mut chars_seen = 0;
+        for (i, line) in lines.enumerate() {
+            let eol_pos = chars_seen + line.len() + 1;
+            if self.start_pos <= eol_pos && self.end_pos >= chars_seen {
+                let mut inner_start_pos: isize = self.start_pos as isize - chars_seen as isize;
+                if inner_start_pos < 0 {
+                    inner_start_pos = 0;
+                }
+
+                let mut inner_end_pos = self.end_pos - chars_seen;
+                if inner_end_pos > line.len() {
+                    inner_end_pos = line.len();
+                }
+                if inner_start_pos as usize != inner_end_pos && !line.is_empty() {
+                    relevant_lines_formatted.push((
+                        i + 1,
+                        format!(
+                            "{}{}{}",
+                            &line[0..inner_start_pos as usize],
+                            Style::new()
+                                .italic()
+                                .underline()
+                                .paint(&line[inner_start_pos as usize..inner_end_pos as usize]),
+                            &line[inner_end_pos..]
+                        ),
+                    ));
+                }
+            }
+            chars_seen += line.len() + 1;
+        }
+        fn indent(n: usize) -> String {
+            String::from_utf8(vec![b' '; n]).unwrap()
+        }
+        let indentation = format!("{}", line_number).len() + 2;
+
+        writeln!(
+            f,
+            "{}{} {}:{}",
+            indent(indentation - 1),
+            Color::Blue.bold().paint("-->"),
+            source.location,
+            line_number
+        );
+        writeln!(
+            f,
+            "{}{}",
+            indent(indentation),
+            Color::Blue.bold().paint("|")
+        );
+
+        for (line_no, line) in relevant_lines_formatted {
+            let line_no_str = format!("{}", line_no);
+            let line_no_indentation = indent(indentation - line_no_str.len() - 1);
+            writeln!(
+                f,
+                "{}{} {}",
+                line_no_indentation,
+                Color::Blue.bold().paint(format!("{} |", line_no_str)),
+                line
+            );
+        }
+
+        write!(
+            f,
+            "{}{}",
+            indent(indentation),
+            Color::Blue.bold().paint("|")
+        )
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, PartialOrd)]
@@ -59,6 +205,10 @@ impl<'a> CallSnapshot<'a> {
             expression: exp.clone(),
         }))
     }
+
+    pub fn expression(&self) -> &'_ Expression<'a> {
+        &self.expression
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, PartialOrd)]
@@ -66,7 +216,7 @@ pub enum Value<'a> {
     List(Vec<Expression<'a>>),
     Number(f64),
     Text(String),
-    Keyword(String),
+    Keyword(Keyword),
     Symbol(Symbol),
     True,
 
@@ -83,7 +233,7 @@ impl<'a> Value<'a> {
     pub fn as_type(&self) -> Self {
         use Value::*;
 
-        Value::Keyword(match self {
+        Value::Keyword(crate::expression::Keyword::new(match self {
             List(_) => "list".to_string(),
             Number(_) => "number".to_string(),
             Text(_) => "text".to_string(),
@@ -95,7 +245,7 @@ impl<'a> Value<'a> {
                 expressions: _,
             } => "lambda".to_string(),
             val => format!("{:?}", val).to_lowercase(),
-        })
+        }))
     }
 }
 
@@ -122,6 +272,11 @@ impl<'a> Expression<'a> {
         }
     }
 
+    pub fn with_source(mut self, source_position: SourcePosition) -> Self {
+        self.source = Some(source_position);
+        self
+    }
+
     pub fn nil() -> Self {
         Self {
             value: Value::List(vec![]),
@@ -144,6 +299,10 @@ impl<'a> Expression<'a> {
 
     pub fn into_value(self) -> Value<'a> {
         self.value
+    }
+
+    pub fn source(&self) -> &'_ Option<SourcePosition> {
+        &self.source
     }
 
     pub fn eval(
@@ -457,7 +616,7 @@ impl Operator {
             }
             Disp => {
                 for mut arg in arguments {
-                    print!("{}\n", arg.eval(snap())?);
+                    println!("{}", arg.eval(snap())?);
                 }
                 Ok(Expression::nil())
             }
@@ -468,6 +627,18 @@ impl Operator {
 impl fmt::Display for Operator {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}", format!("{:?}", self).to_lowercase().as_str())
+    }
+}
+
+impl fmt::Display for Keyword {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, ":{}", self.string_value())
+    }
+}
+
+impl fmt::Display for Symbol {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.string_value())
     }
 }
 
@@ -496,7 +667,7 @@ impl<'a> fmt::Display for Value<'a> {
             Number(val) => write!(f, "{}", val),
             Text(val) => write!(f, "<\"{}\">", val),
             Symbol(val) => write!(f, "{}", val),
-            Keyword(val) => write!(f, ":{}", val),
+            Keyword(val) => write!(f, "{}", val),
             True => write!(f, "true"),
             Lambda {
                 params,
