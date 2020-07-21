@@ -367,13 +367,13 @@ impl Operator {
                             format!("cannot `car` an empty list (nil)")
                         );
                         Ok(vals.get(0).unwrap().clone())
-                }
+                    }
                     _ => exp!(
                         EV::InvalidArgument,
                         snap(),
                         format!("`car` expects a list, got `{}`", list)
                     ),
-            }
+                }
             }
             Cdr => {
                 exp_assert!(
@@ -416,8 +416,8 @@ impl Operator {
                         EV::InvalidArgument,
                         snap(),
                         format!(
-                        "`cons` expects a list as its second argument, got `{}`",
-                        list
+                            "`cons` expects a list as its second argument, got `{}`",
+                            list
                         )
                     ),
                 }
@@ -467,8 +467,8 @@ impl Operator {
                         EV::InvalidArgument,
                         snap(),
                         format!(
-                        "first arg of label must evaluate to a symbol (received `{}`)",
-                        arguments.get(0).unwrap()
+                            "first arg of label must evaluate to a symbol (received `{}`)",
+                            arguments.get(0).unwrap()
                         )
                     ),
                 };
@@ -524,8 +524,8 @@ impl Operator {
                         EV::InvalidArgument,
                         snap(),
                         format!(
-                        "`exp` requires its arguments to be both numeric (got `{}` and `{}`)",
-                        base, exp
+                            "`exp` requires its arguments to be both numeric (got `{}` and `{}`)",
+                            base, exp
                         )
                     ),
                 }
@@ -616,7 +616,7 @@ impl Operator {
                         EV::ArgumentMismatch,
                         snapshot,
                         format!(
-                            "`include` requires 1 argument (received {})",
+                            "`include` requires 1 argument, but {} given",
                             arguments.len()
                         )
                     );
