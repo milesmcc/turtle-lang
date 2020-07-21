@@ -426,15 +426,26 @@ impl Operator {
                 for argument in arguments {
                     match argument.value {
                         Value::List(mut elems) => {
-                            let cond =
-                                { elems.get_mut(0).expect("`cond` must have a conditional") };
+                            exp_assert!(
+                                elems.len() == 2,
+                                EV::InvalidArgument,
+                                snap(),
+                                format!(
+                                    "each `cond` condition must be a list of length two (the given list has {} elements)",
+                                    elems.len()
+                                )
+                            );
+                            let cond = { elems.get_mut(0).unwrap() };
                             if cond.eval(snap())?.into_value() == Value::True {
-                                let val =
-                                    { elems.get_mut(1).expect("`cond` must have a value to eval") };
+                                let val = { elems.get_mut(1).unwrap() };
                                 return val.eval(snapshot);
                             }
                         }
-                        _ => panic!("`cond` must be called on a list, got `{}`", argument),
+                        _ => exp!(
+                            EV::InvalidArgument,
+                            snap(),
+                            format!("`cond` must be called on a list, got `{}`", argument)
+                        ),
                     }
                 }
                 Ok(Expression::nil())
