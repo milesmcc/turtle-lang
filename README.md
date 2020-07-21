@@ -3,3 +3,4 @@ A Lispy programming language that, minus a small shell, is written in itself. It
 
 ## TODO
 - [] Figure out why `(eq func func)` is false
+- [] Figure out namespaces

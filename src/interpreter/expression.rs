@@ -101,12 +101,9 @@ impl<'a> Value<'a> {
             Keyword(_) => "keyword".to_string(),
             Symbol(_) => "symbol".to_string(),
             Operator(_) => "operator".to_string(),
-            Lambda {
-                params: _,
-                expressions: _,
-                collapse_input: _,
-            } => "lambda".to_string(),
-            val => format!("{:?}", val).to_lowercase(),
+            Lambda { .. } => "lambda".to_string(),
+            Macro { .. } => "macro".to_string(),
+            _ => "unknown".to_string(),
         }))
     }
 }
@@ -275,13 +272,15 @@ impl<'a> Expression<'a> {
     }
 
     fn get_env(&self) -> RwLockReadGuard<Environment<'a>> {
-        self.env.read().expect("unable to access environment")
+        self.env
+            .read()
+            .expect("unable to access environment (are threads locked?)")
     }
 
     fn get_env_mut(&mut self) -> RwLockWriteGuard<Environment<'a>> {
         self.env
             .write()
-            .expect("unable to mutably access environment")
+            .expect("unable to mutably access environment (are threads locked?)")
     }
 }
 
@@ -321,30 +320,33 @@ impl Operator {
                 }
             }
             Eq => {
-                let first = arguments
-                    .get_mut(0)
-                    .expect("`eq` requires a first argument")
-                    .eval(snap())?;
-                let second = arguments
-                    .get_mut(1)
-                    .expect("`eq` requires a second argument")
-                    .eval(snap())?;
-                match (first.into_value(), second.into_value()) {
-                    (Value::List(l1), Value::List(l2)) => {
-                        if l1.is_empty() && l2.is_empty() {
-                            Ok(Expression::t())
-                        } else {
-                            Ok(Expression::nil())
-                        }
-                    }
-                    (v1, v2) => {
-                        if v1 == v2 {
-                            Ok(Expression::t())
-                        } else {
-                            Ok(Expression::nil())
-                        }
+                exp_assert!(
+                    arguments.len() > 1,
+                    EV::ArgumentMismatch,
+                    snap(),
+                    format!("2+ arguments required, but {} given", arguments.len())
+                );
+
+                let mut prev: Option<Expression> = None;
+                for mut argument in arguments {
+                    let evaled = argument.eval(snap())?;
+                    match &prev {
+                        None => prev = Some(evaled.clone()),
+                        Some(val) => match (evaled.into_value(), val.clone().into_value()) {
+                            (Value::List(l1), Value::List(l2)) => {
+                                if !(l1.is_empty() && l2.is_empty()) {
+                                    return Ok(Expression::nil());
+                                }
+                            }
+                            (v1, v2) => {
+                                if v1 != v2 {
+                                    return Ok(Expression::nil());
+                                }
+                            }
+                        },
                     }
                 }
+                return Ok(Expression::t());
             }
             Car => {
                 let list = arguments
