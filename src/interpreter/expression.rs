@@ -398,16 +398,27 @@ impl Operator {
                 }
             }
             Cons => {
-                let first = arguments[0].eval(snap())?;
-                let list = arguments[1].eval(snap())?;
+                exp_assert!(
+                    arguments.len() == 2,
+                    EV::ArgumentMismatch,
+                    snap(),
+                    format!("`cons` requires 2 arguments, but {} given", arguments.len())
+                );
+                let first = arguments.get_mut(0).unwrap().eval(snap())?;
+                let list = arguments.get_mut(1).unwrap().eval(snap())?;
                 match list.value {
                     Value::List(mut vals) => {
                         vals.insert(0, first);
                         Ok(Expression::new(Value::List(vals), expr.env.clone()))
                     }
-                    _ => panic!(
+                    _ => exp_assert!(
+                        arguments.len() > 1,
+                        EV::InvalidArgument,
+                        snap(),
+                        format!(
                         "`cons` expects a list as its second argument, got `{}`",
                         list
+                        )
                     ),
                 }
             }
