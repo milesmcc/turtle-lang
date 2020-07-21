@@ -27,6 +27,6 @@ quote = { "'" ~ expression }
 eval = { "," ~ expression }
 sugar = _{ quote | eval }
 
-expression = _{ sugar | func_notations | primitive }
+expression = _{ sugar | primitive }
 
 expressions = _{ SOI ~ expression+ ~ EOI }

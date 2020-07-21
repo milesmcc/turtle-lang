@@ -61,6 +61,9 @@ pub enum Operator {
     Include,
     Eval,
     While,
+    Lambda,
+    Macro,
+    List,
 }
 
 #[derive(Debug, Clone, PartialEq, PartialOrd)]
@@ -300,7 +303,7 @@ impl Operator {
                     exp!(
                         EV::ArgumentMismatch,
                         snapshot,
-                        format!("quote requires 1 argument (received {})", arguments.len())
+                        format!("`quote` requires 1 argument (received {})", arguments.len())
                     );
                 }
                 Ok(arguments.get(0).unwrap().clone())
@@ -310,24 +313,24 @@ impl Operator {
                     arguments.len() == 1,
                     EV::ArgumentMismatch,
                     snapshot,
-                    format!("atom requires 1 argument (received {})", arguments.len())
+                    format!("`atom` requires 1 argument (received {})", arguments.len())
                 );
                 match arguments.get_mut(0).unwrap().eval(snapshot)?.into_value() {
-                    List(_) => Ok(Expression::new(Value::List(vec![]), expr.env.clone())),
+                    Value::List(_) => Ok(Expression::new(Value::List(vec![]), expr.env.clone())),
                     _ => Ok(Expression::new(Value::True, expr.env.clone())),
                 }
             }
             Eq => {
                 let first = arguments
                     .get_mut(0)
-                    .expect("eq requires a first argument")
+                    .expect("`eq` requires a first argument")
                     .eval(snap())?;
                 let second = arguments
                     .get_mut(1)
-                    .expect("eq requires a second argument")
+                    .expect("`eq` requires a second argument")
                     .eval(snap())?;
                 match (first.into_value(), second.into_value()) {
-                    (List(l1), List(l2)) => {
+                    (Value::List(l1), Value::List(l2)) => {
                         if l1.is_empty() && l2.is_empty() {
                             Ok(Expression::t())
                         } else {
@@ -349,56 +352,60 @@ impl Operator {
                     .expect("car requires an argument")
                     .eval(snapshot)?;
                 match list.value {
-                    List(vals) => Ok(vals.get(0).expect("cannot car empty list").clone()),
-                    _ => panic!("car expects a list, got `{}`", list),
+                    Value::List(vals) => Ok(vals.get(0).expect("cannot car empty list").clone()),
+                    _ => panic!("`car` expects a list, got `{}`", list),
                 }
             }
             Cdr => {
                 let list = arguments
                     .get_mut(0)
-                    .expect("cdr requires an argument")
+                    .expect("`cdr` requires an argument")
                     .eval(snapshot)?;
                 match list.value {
-                    List(mut vals) => {
+                    Value::List(mut vals) => {
                         if !vals.is_empty() {
                             vals.remove(0);
                         }
-                        Ok(Expression::new(List(vals), expr.env.clone()))
+                        Ok(Expression::new(Value::List(vals), expr.env.clone()))
                     }
-                    _ => panic!("cdr expects a list, got `{}`", list),
+                    _ => panic!("`cdr` expects a list, got `{}`", list),
                 }
             }
             Cons => {
                 let first = arguments[0].eval(snap())?;
                 let list = arguments[1].eval(snap())?;
                 match list.value {
-                    List(mut vals) => {
+                    Value::List(mut vals) => {
                         vals.insert(0, first);
-                        Ok(Expression::new(List(vals), expr.env.clone()))
+                        Ok(Expression::new(Value::List(vals), expr.env.clone()))
                     }
-                    _ => panic!("cons expects a list as its second argument, got `{}`", list),
+                    _ => panic!(
+                        "`cons` expects a list as its second argument, got `{}`",
+                        list
+                    ),
                 }
             }
             Cond => {
                 for argument in arguments {
                     match argument.value {
-                        List(mut elems) => {
-                            let cond = { elems.get_mut(0).expect("cond must have a conditional") };
+                        Value::List(mut elems) => {
+                            let cond =
+                                { elems.get_mut(0).expect("`cond` must have a conditional") };
                             if cond.eval(snap())?.into_value() == Value::True {
                                 let val =
-                                    { elems.get_mut(1).expect("cond must have a value to eval") };
+                                    { elems.get_mut(1).expect("`cond` must have a value to eval") };
                                 return val.eval(snapshot);
                             }
                         }
-                        _ => panic!("cond must be called on a list, got `{}`", argument),
+                        _ => panic!("`cond` must be called on a list, got `{}`", argument),
                     }
                 }
-                panic!("none of cond was true");
+                Ok(Expression::nil())
             }
             Label => {
                 let sym_exp = arguments
                     .get(0)
-                    .expect("label requires an argument for the symbol")
+                    .expect("`label` requires an argument for the symbol")
                     .clone()
                     .eval(snap())?;
                 let symbol = match sym_exp.into_value() {
@@ -410,7 +417,7 @@ impl Operator {
                 };
                 let assigned_expr = arguments
                     .get(1)
-                    .expect("label requires a second argument for the assigned expression")
+                    .expect("`label` requires a second argument for the assigned expression")
                     .clone()
                     .eval(snap())?;
                 expr.get_env_mut()
@@ -422,7 +429,7 @@ impl Operator {
                 for mut arg in arguments {
                     match arg.eval(snap())?.into_value() {
                         Number(val) => sum += val,
-                        val => panic!("add expects numbers as its arguments (got `{}`)", val),
+                        val => panic!("`add` expects numbers as its arguments (got `{}`)", val),
                     }
                 }
                 Ok(Expression::new(Value::Number(sum), expr.env.clone()))
@@ -432,7 +439,7 @@ impl Operator {
                 for mut arg in arguments {
                     match arg.eval(snap())?.into_value() {
                         Number(val) => prod *= val,
-                        val => panic!("prod expects numbers as its arguments (got `{}`)", val),
+                        val => panic!("`prod` expects numbers as its arguments (got `{}`)", val),
                     }
                 }
                 Ok(Expression::new(Value::Number(prod), expr.env.clone()))
@@ -440,12 +447,12 @@ impl Operator {
             Exp => {
                 let base = arguments
                     .get_mut(0)
-                    .expect("exp requires a first argument")
+                    .expect("`exp` requires a first argument")
                     .eval(snap())?
                     .into_value();
                 let exp = arguments
                     .get_mut(1)
-                    .expect("exp requires a second argument")
+                    .expect("`exp` requires a second argument")
                     .eval(snap())?
                     .into_value();
                 match (base, exp) {
@@ -454,7 +461,7 @@ impl Operator {
                         expr.env.clone(),
                     )),
                     (base, exp) => panic!(
-                        "exp requires its arguments to be both numeric (got `{}` and `{}`)",
+                        "`exp` requires its arguments to be both numeric (got `{}` and `{}`)",
                         base, exp
                     ),
                 }
@@ -462,12 +469,12 @@ impl Operator {
             Modulo => {
                 let val = arguments
                     .get_mut(0)
-                    .expect("modulo requires a first argument")
+                    .expect("`modulo` requires a first argument")
                     .eval(snap())?
                     .into_value();
                 let modu = arguments
                     .get_mut(1)
-                    .expect("modulo requires a second argument")
+                    .expect("`modulo` requires a second argument")
                     .eval(snap())?
                     .into_value();
                 match (val, modu) {
@@ -476,7 +483,7 @@ impl Operator {
                         expr.env.clone(),
                     )),
                     (base, exp) => panic!(
-                        "modulo requires its arguments to be both numeric (got `{}` and `{}`)",
+                        "`modulo` requires its arguments to be both numeric (got `{}` and `{}`)",
                         base, exp
                     ),
                 }
@@ -514,7 +521,7 @@ impl Operator {
             Type => {
                 let arg_type = arguments
                     .get_mut(0)
-                    .expect("type requires an argument")
+                    .expect("`type` requires an argument")
                     .eval(snap())?
                     .into_value()
                     .as_type();
@@ -531,7 +538,10 @@ impl Operator {
                     exp!(
                         EV::ArgumentMismatch,
                         snapshot,
-                        format!("include requires 1 argument (received {})", arguments.len())
+                        format!(
+                            "`include` requires 1 argument (received {})",
+                            arguments.len()
+                        )
                     );
                 }
                 let path = match arguments.get_mut(0).unwrap().eval(snap())?.value {
@@ -540,7 +550,7 @@ impl Operator {
                         EV::InvalidArgument,
                         snapshot,
                         format!(
-                            "include requires the path (:text) as its argument (got `{}` instead)",
+                            "`include` requires the path (:text) as its argument (got `{}` instead)",
                             val
                         )
                     ),
@@ -553,7 +563,7 @@ impl Operator {
                     exp!(
                         EV::ArgumentMismatch,
                         snapshot,
-                        format!("eval requires 1 argument (received {})", arguments.len())
+                        format!("`eval` requires 1 argument (received {})", arguments.len())
                     );
                 }
                 arguments.get_mut(0).unwrap().eval(snap())?.eval(snap())
@@ -563,7 +573,10 @@ impl Operator {
                     arguments.len() == 2,
                     EV::ArgumentMismatch,
                     snapshot,
-                    format!("while requires 2 arguments (received {})", arguments.len())
+                    format!(
+                        "`while` requires 2 arguments (received {})",
+                        arguments.len()
+                    )
                 );
                 let condition = arguments.get(0).unwrap();
                 let action = arguments.get(1).unwrap();
@@ -572,6 +585,74 @@ impl Operator {
                     result = action.clone().eval(snap())?
                 }
                 Ok(result)
+            }
+            crate::Operator::Lambda | crate::Operator::Macro => {
+                exp_assert!(
+                    arguments.len() >= 2,
+                    EV::ArgumentMismatch,
+                    snapshot,
+                    format!(
+                        "requires at least 2 arguments (received {})",
+                        arguments.len()
+                    )
+                );
+
+                let mut collapse_input = true;
+                let func_args = match arguments.get_mut(0).unwrap().eval(snap())?.into_value() {
+                    Value::List(vals) => {
+                        println!("the function wants destructuring as input, not collapsing");
+                        collapse_input = false;
+                        let mut symbols = Vec::new();
+                        for val in vals {
+                            match val.into_value() {
+                            Value::Symbol(sym) => symbols.push(sym),
+                            other => exp!(EV::InvalidArgument, snapshot, format!("each item in the first argument (a list) must be a symbol (got `{}`)", other)),
+                        }
+                        }
+                        symbols
+                    }
+                    Value::Symbol(sym) => vec![sym],
+                    val => exp!(
+                        EV::InvalidArgument,
+                        snapshot,
+                        format!(
+                            "the first argument must only evaluate to symbol(s) (got `{}`)",
+                            val
+                        )
+                    ),
+                };
+                let mut func_expressions = Vec::new();
+                for arg_expr in arguments.iter().skip(1) {
+                    func_expressions.push(arg_expr.clone().eval(snap())?);
+                }
+
+                (match self {
+                    crate::Operator::Lambda => Expression::new(
+                        Value::Lambda {
+                            params: func_args,
+                            expressions: func_expressions,
+                            collapse_input,
+                        },
+                        expr.clone_env(),
+                    ),
+                    crate::Operator::Macro => Expression::new(
+                        Value::Macro {
+                            params: func_args,
+                            expressions: func_expressions,
+                            collapse_input,
+                        },
+                        expr.clone_env(),
+                    ),
+                    _ => unreachable!(),
+                })
+                .eval(snap())
+            }
+            crate::Operator::List => {
+                let mut args_evaled = Vec::new();
+                for mut argument in arguments {
+                    args_evaled.push(argument.eval(snap())?);
+                }
+                Ok(Expression::new(Value::List(args_evaled), expr.clone_env()))
             }
         }
     }

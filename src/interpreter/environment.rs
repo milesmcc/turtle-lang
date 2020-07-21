@@ -53,6 +53,9 @@ impl<'a> Environment<'a> {
             "include" => Some(Value::Operator(Include)),
             "eval" => Some(Value::Operator(Eval)),
             "while" => Some(Value::Operator(While)),
+            "macro" => Some(Value::Operator(Macro)),
+            "lambda" => Some(Value::Operator(Lambda)),
+            "list" => Some(Value::Operator(List)),
             _ => None,
         }
     }
@@ -88,21 +91,21 @@ impl<'a> Environment<'a> {
     }
 }
 
-impl<'a> fmt::Display for Environment<'a> {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(
-            f,
-            "[values: {}]\n{}\n--- showing parent ---\n{}",
-            self.values.len(),
-            self.values
-                .iter()
-                .map(|(k, v)| format!("{} := {}", k, v))
-                .collect::<Vec<String>>()
-                .join("\n"),
-            match &self.parent {
-                Some(parent) => format!("{}", parent.read().expect("cannot get parent")),
-                None => String::from("env has no parent"),
-            }
-        )
-    }
-}
+// impl<'a> fmt::Display for Environment<'a> {
+//     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+//         write!(
+//             f,
+//             "[values: {}]\n{}\n--- showing parent ---\n{}",
+//             self.values.len(),
+//             self.values
+//                 .iter()
+//                 .map(|(k, v)| format!("{} := {}", k, v))
+//                 .collect::<Vec<String>>()
+//                 .join("\n"),
+//             match &self.parent {
+//                 Some(parent) => format!("{}", parent.read().expect("cannot get parent")),
+//                 None => String::from("env has no parent"),
+//             }
+//         )
+//     }
+// }

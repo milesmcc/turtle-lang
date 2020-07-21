@@ -84,56 +84,6 @@ fn build_expression<'a>(
             Value::Text(pair.into_inner().as_str().to_string()),
             env.clone(),
         )),
-        Rule::lambda_def | Rule::macro_def => {
-            let rule = pair.as_rule();
-
-            let child_env = Environment::with_parent(env.clone());
-
-            let mut inner = pair.into_inner();
-            let mut symbol_expressions: Vec<Expression> = Vec::new();
-            let arg_symbol = inner.next().unwrap();
-            let collapse_input = match arg_symbol.as_rule() {
-                Rule::arg_symbols => false,
-                _ => true,
-            };
-            for pair in arg_symbol.into_inner() {
-                symbol_expressions.push(
-                    build_expression(pair.clone(), child_env.clone(), source.clone())?
-                        .with_source(SourcePosition::from_pair(&pair, &source)),
-                )
-            }
-            let mut symbols: Vec<Symbol> = Vec::new();
-            for exp in symbol_expressions {
-                match exp.into_value() {
-                    Value::Symbol(sym) => symbols.push(sym),
-                    _ => panic!("cannot have args that aren't symbols"),
-                }
-            }
-            let mut expressions = Vec::new();
-            for exp in inner {
-                expressions.push(
-                    build_expression(exp.clone(), child_env.clone(), source.clone())?
-                        .with_source(SourcePosition::from_pair(&exp, &source)),
-                );
-            }
-            Ok(Expression::new(
-                match rule {
-                    Rule::lambda_def => Value::Lambda {
-                        params: symbols,
-                        expressions,
-                        collapse_input,
-                    },
-                    Rule::macro_def => Value::Macro {
-                        params: symbols,
-                        expressions,
-                        collapse_input,
-                    },
-                    _ => unreachable!(),
-                },
-                env,
-            )
-            .with_source(pos))
-        }
 
         // Sugar
         Rule::quote | Rule::eval => {
