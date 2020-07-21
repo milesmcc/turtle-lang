@@ -135,6 +135,6 @@ pub fn spawn(env: Arc<RwLock<Environment>>) {
                 break;
             }
         }
+        rl.save_history(".turtle_history.txt").unwrap();
     }
-    rl.save_history(".turtle_history.txt").unwrap();
 }

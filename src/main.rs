@@ -12,6 +12,7 @@ pub mod interpreter;
 pub mod parser;
 pub mod repl;
 pub mod stdlib;
+pub mod spec;
 
 pub use interpreter::call_snapshot::CallSnapshot;
 pub use interpreter::environment::Environment;
