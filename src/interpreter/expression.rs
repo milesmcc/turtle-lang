@@ -483,7 +483,11 @@ impl Operator {
                 for mut arg in arguments {
                     match arg.eval(snap())?.into_value() {
                         Number(val) => sum += val,
-                        val => panic!("`add` expects numbers as its arguments (got `{}`)", val),
+                        val => exp!(
+                            EV::InvalidArgument,
+                            snap(),
+                            format!("`sum` expects numbers as its arguments (got `{}`)", val)
+                        ),
                     }
                 }
                 Ok(Expression::new(Value::Number(sum), expr.env.clone()))
