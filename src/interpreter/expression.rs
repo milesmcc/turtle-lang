@@ -497,7 +497,11 @@ impl Operator {
                 for mut arg in arguments {
                     match arg.eval(snap())?.into_value() {
                         Number(val) => prod *= val,
-                        val => panic!("`prod` expects numbers as its arguments (got `{}`)", val),
+                        val => exp!(
+                            EV::InvalidArgument,
+                            snap(),
+                            format!("`prod` expects numbers as its arguments (got `{}`)", val)
+                        ),
                     }
                 }
                 Ok(Expression::new(Value::Number(prod), expr.env.clone()))
