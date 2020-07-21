@@ -83,13 +83,7 @@ fn build_expression<'a>(
         Rule::lambda | Rule::macro_ => {
             let rule = pair.as_rule();
 
-            let child_env = match rule {
-                // We want macros to run with the scope of where they are
-                // called.
-                Rule::lambda => Environment::with_parent(env.clone()),
-                Rule::macro_ => env.clone(),
-                _ => unreachable!(),
-            };
+            let child_env = Environment::with_parent(env.clone());
 
             let mut inner = pair.into_inner();
             let mut symbol_expressions: Vec<Expression> = Vec::new();
