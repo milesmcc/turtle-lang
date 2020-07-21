@@ -9,7 +9,7 @@
 (setq third (lambda '(x) '(head (tail (tail x)))))
 (setq fourth (lambda '(x) '(head (tail (tail (tail x))))))
 
-(setq func (macro 'args '(setq '(first args) (lambda '(second args) (tail (tail args))))))
+(label 'func (macro 'args '(label (first args) (lambda (second args) (first (tail (tail args)))))))
 
 ;; Basic math operators  
 (setq + sum)

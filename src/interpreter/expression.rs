@@ -600,7 +600,6 @@ impl Operator {
                 let mut collapse_input = true;
                 let func_args = match arguments.get_mut(0).unwrap().eval(snap())?.into_value() {
                     Value::List(vals) => {
-                        println!("the function wants destructuring as input, not collapsing");
                         collapse_input = false;
                         let mut symbols = Vec::new();
                         for val in vals {
