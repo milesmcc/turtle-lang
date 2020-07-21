@@ -80,14 +80,19 @@ fn build_expression<'a>(
             Value::Text(pair.into_inner().as_str().to_string()),
             env.clone(),
         )),
-        Rule::lambda | Rule::macro_ => {
+        Rule::lambda_def | Rule::macro_def => {
             let rule = pair.as_rule();
 
             let child_env = Environment::with_parent(env.clone());
 
             let mut inner = pair.into_inner();
             let mut symbol_expressions: Vec<Expression> = Vec::new();
-            for pair in inner.next().unwrap().into_inner() {
+            let arg_symbol = inner.next().unwrap();
+            let collapse_input = match arg_symbol.as_rule() {
+                Rule::arg_symbols => false,
+                _ => true,
+            };
+            for pair in arg_symbol.into_inner() {
                 symbol_expressions.push(
                     build_expression(pair.clone(), child_env.clone(), source.clone())?
                         .with_source(SourcePosition::from_pair(&pair, &source)),
@@ -109,13 +114,15 @@ fn build_expression<'a>(
             }
             Ok(Expression::new(
                 match rule {
-                    Rule::lambda => Value::Lambda {
+                    Rule::lambda_def => Value::Lambda {
                         params: symbols,
                         expressions,
+                        collapse_input
                     },
-                    Rule::macro_ => Value::Macro {
+                    Rule::macro_def => Value::Macro {
                         params: symbols,
                         expressions,
+                        collapse_input
                     },
                     _ => unreachable!(),
                 },

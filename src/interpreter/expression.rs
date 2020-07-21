@@ -78,10 +78,12 @@ pub enum Value<'a> {
     Lambda {
         params: Vec<Symbol>,
         expressions: Vec<Expression<'a>>,
+        collapse_input: bool,
     },
     Macro {
         params: Vec<Symbol>,
         expressions: Vec<Expression<'a>>,
+        collapse_input: bool,
     },
 }
 
@@ -99,6 +101,7 @@ impl<'a> Value<'a> {
             Lambda {
                 params: _,
                 expressions: _,
+                collapse_input: _,
             } => "lambda".to_string(),
             val => format!("{:?}", val).to_lowercase(),
         }))
@@ -180,7 +183,7 @@ impl<'a> Expression<'a> {
                 if !vals.is_empty() {
                     let mut operator = vals.get(0).unwrap().clone();
                     let arguments: Vec<Expression<'a>> = vals.iter().skip(1).cloned().collect();
-                    match operator.value {
+                    match &operator.value {
                         Operator(operand) => operand.apply(snapshot, arguments, self),
                         List(_) | Symbol(_) => {
                             let evaled_operator = operator.eval(snap())?;
@@ -192,47 +195,69 @@ impl<'a> Expression<'a> {
                         }
                         Lambda {
                             params,
-                            mut expressions,
-                        } => {
-                            for (symbol, arg_expr) in params.iter().zip(arguments.iter()) {
-                                // Note: because evaluating the argument expression requires
-                                // accessing the environment, it cannot be done while `get_env_mut`
-                                // is active (as the thread would deadlock).
-                                let arg_evaled = arg_expr.clone().eval(snap());
-                                for exp in &mut expressions {
-                                    exp.get_env_mut().assign(
-                                        symbol.clone(),
-                                        arg_evaled.clone()?,
-                                        true,
-                                    );
-                                }
-                            }
-                            let mut result = Expression::nil();
-                            for mut exp in expressions {
-                                result = exp.eval(snap())?;
-                            }
-                            Ok(result)
+                            expressions,
+                            collapse_input,
                         }
-                        Macro {
+                        | Macro {
                             params,
-                            mut expressions,
+                            expressions,
+                            collapse_input,
                         } => {
-                            for (symbol, arg_expr) in params.iter().zip(arguments.iter()) {
-                                for exp in &mut expressions {
-                                    exp.get_env_mut().assign(
-                                        symbol.clone(),
-                                        arg_expr.clone(),
-                                        true,
-                                    );
+                            if *collapse_input {
+                                let sym = params.get(0).unwrap(); // this unwrap will always be ok; it is enforced by the parser
+                                let args_evaled = {
+                                    let mut list = Vec::new();
+                                    for arg_expr in arguments {
+                                        list.push(match &operator.value {
+                                            Lambda { .. } => arg_expr.clone().eval(snap())?,
+                                            Macro { .. } => arg_expr.clone(),
+                                            _ => unreachable!(),
+                                        });
+                                    }
+                                    list
+                                };
+                                let arg =
+                                    Expression::new(Value::List(args_evaled), self.env.clone());
+                                for mut exp in expressions.clone() {
+                                    exp.get_env_mut().assign(sym.clone(), arg.clone(), true);
+                                }
+                            } else {
+                                exp_assert!(
+                                    params.len() == arguments.len(),
+                                    EV::ArgumentMismatch,
+                                    snap(),
+                                    format!(
+                                        "{} argument{} required, but {} given",
+                                        params.len(),
+                                        match params.len() {
+                                            1 => "",
+                                            _ => "s",
+                                        },
+                                        arguments.len()
+                                    )
+                                );
+                                for (symbol, arg_expr) in params.iter().zip(arguments.iter()) {
+                                    let arg_evaled = match &operator.value {
+                                        Lambda { .. } => arg_expr.clone().eval(snap())?,
+                                        Macro { .. } => arg_expr.clone(),
+                                        _ => unreachable!(),
+                                    };
+                                    for mut exp in expressions.clone() {
+                                        exp.get_env_mut().assign(
+                                            symbol.clone(),
+                                            arg_evaled.clone(),
+                                            true,
+                                        );
+                                    }
                                 }
                             }
                             let mut result = Expression::nil();
-                            for mut exp in expressions {
+                            for mut exp in expressions.clone() {
                                 result = exp.eval(snap())?;
                             }
                             Ok(result)
                         }
-                        val => exp!(EV::InvalidOperator(val), snapshot),
+                        val => exp!(EV::InvalidOperator(val.clone()), snapshot),
                     }
                 } else {
                     Ok(self.clone())
@@ -600,14 +625,23 @@ impl<'a> fmt::Display for Value<'a> {
             Lambda {
                 params,
                 expressions,
+                collapse_input,
             } => write!(
                 f,
-                "<lambda {} -> {}>",
+                "<lambda {}{}{} -> {}>",
+                match collapse_input {
+                    true => "",
+                    false => "(",
+                },
                 params
                     .iter()
                     .map(|x| format!("{}", x))
                     .collect::<Vec<String>>()
                     .join(" "),
+                match collapse_input {
+                    true => "",
+                    false => ")",
+                },
                 expressions
                     .iter()
                     .map(|x| format!("{}", x))
@@ -617,14 +651,23 @@ impl<'a> fmt::Display for Value<'a> {
             Macro {
                 params,
                 expressions,
+                collapse_input,
             } => write!(
                 f,
-                "<macro {} -> {}>",
+                "<macro {}{}{} -> {}>",
+                match collapse_input {
+                    true => "",
+                    false => "(",
+                },
                 params
                     .iter()
                     .map(|x| format!("{}", x))
                     .collect::<Vec<String>>()
                     .join(" "),
+                match collapse_input {
+                    true => "",
+                    false => ")",
+                },
                 expressions
                     .iter()
                     .map(|x| format!("{}", x))
