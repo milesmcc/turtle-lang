@@ -59,6 +59,7 @@ pub enum Operator {
     Type,
     Disp,
     Include,
+    Eval,
 }
 
 #[derive(Debug, Clone, PartialEq, PartialOrd)]
@@ -77,6 +78,10 @@ pub enum Value<'a> {
         params: Vec<Symbol>,
         expressions: Vec<Expression<'a>>,
     },
+    Macro {
+        params: Vec<Symbol>,
+        expressions: Vec<Expression<'a>>,
+    }
 }
 
 impl<'a> Value<'a> {
@@ -196,6 +201,22 @@ impl<'a> Expression<'a> {
                                 for exp in &mut expressions {
                                     exp.get_env_mut()
                                         .assign(symbol.clone(), arg_evaled.clone()?);
+                                }
+                            }
+                            let mut result = Expression::nil();
+                            for mut exp in expressions {
+                                result = exp.eval(snap())?;
+                            }
+                            Ok(result)
+                        },
+                        Macro {
+                            params,
+                            mut expressions,
+                        } => {
+                            for (symbol, arg_expr) in params.iter().zip(arguments.iter()) {
+                                for exp in &mut expressions {
+                                    exp.get_env_mut()
+                                        .assign(symbol.clone(), arg_expr.clone());
                                 }
                             }
                             let mut result = Expression::nil();
@@ -494,7 +515,17 @@ impl Operator {
                 };
 
                 resolve_resource(&path, snapshot, expr)
-            }
+            },
+            Eval => {
+                if arguments.len() != 1 {
+                    exp!(
+                        EV::ArgumentMismatch,
+                        snapshot,
+                        format!("eval requires 1 argument (received {})", arguments.len())
+                    );
+                }
+                arguments.get_mut(0).unwrap().eval(snap())?.eval(snap())
+            },
         }
     }
 }
@@ -550,6 +581,23 @@ impl<'a> fmt::Display for Value<'a> {
             } => write!(
                 f,
                 "<lambda {} -> {}>",
+                params
+                    .iter()
+                    .map(|x| format!("{}", x))
+                    .collect::<Vec<String>>()
+                    .join(" "),
+                expressions
+                    .iter()
+                    .map(|x| format!("{}", x))
+                    .collect::<Vec<String>>()
+                    .join(" ")
+            ),
+            Macro {
+                params,
+                expressions,
+            } => write!(
+                f,
+                "<macro {} -> {}>",
                 params
                     .iter()
                     .map(|x| format!("{}", x))

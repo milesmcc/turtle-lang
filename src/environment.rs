@@ -51,6 +51,7 @@ impl<'a> Environment<'a> {
             "type" => Some(Value::Operator(Type)),
             "disp" => Some(Value::Operator(Disp)),
             "include" => Some(Value::Operator(Include)),
+            "eval" => Some(Value::Operator(Eval)),
             _ => None,
         }
     }

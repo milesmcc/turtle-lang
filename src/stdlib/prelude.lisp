@@ -1,4 +1,3 @@
 ;;; -*- Mode: Lisp; Syntax: Turtle -*-
 
-(disp "The prelude was loaded!")
-(disp this)
+(label 'setq (macro (identifier value) (label identifier ,value))))

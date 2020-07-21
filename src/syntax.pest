@@ -15,15 +15,16 @@ text = { "\"" ~ char* ~ "\"" }
 
 primitive = _{ list | keyword | text | number | symbol }
 
-// Functions
-lambda_symbols = { "(" ~ symbol* ~ ")" }
-lambda = {"(" ~ "lambda" ~ lambda_symbols ~ expression+ ~ ")"}
-function = _{ lambda }
+// Functions & macros
+arg_symbols = { "(" ~ symbol* ~ ")" }
+lambda = {"(" ~ "lambda" ~ arg_symbols ~ expression+ ~ ")"}
+macro_ = {"(" ~ "macro" ~ arg_symbols ~ expression+ ~ ")"}
 
 // Sugar
-quote = { "'" ~ expression}
-sugar = _{ quote }
+quote = { "'" ~ expression }
+eval = { "," ~ expression }
+sugar = _{ quote | eval }
 
-expression = _{ sugar | lambda | primitive }
+expression = _{ sugar | lambda | macro_ | primitive }
 
 expressions = _{ (WHITESPACE | COMMENT)* ~ expression+ }
