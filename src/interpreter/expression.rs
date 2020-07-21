@@ -507,24 +507,26 @@ impl Operator {
                 Ok(Expression::new(Value::Number(prod), expr.env.clone()))
             }
             Exp => {
-                let base = arguments
-                    .get_mut(0)
-                    .expect("`exp` requires a first argument")
-                    .eval(snap())?
-                    .into_value();
-                let exp = arguments
-                    .get_mut(1)
-                    .expect("`exp` requires a second argument")
-                    .eval(snap())?
-                    .into_value();
+                exp_assert!(
+                    arguments.len() == 2,
+                    EV::ArgumentMismatch,
+                    snap(),
+                    format!("`exp` requires 2 arguments, but {} given", arguments.len())
+                );
+                let base = arguments.get_mut(0).unwrap().eval(snap())?.into_value();
+                let exp = arguments.get_mut(1).unwrap().eval(snap())?.into_value();
                 match (base, exp) {
                     (Number(base), Number(exp)) => Ok(Expression::new(
                         Value::Number(base.powf(exp)),
                         expr.env.clone(),
                     )),
-                    (base, exp) => panic!(
+                    (base, exp) => exp!(
+                        EV::InvalidArgument,
+                        snap(),
+                        format!(
                         "`exp` requires its arguments to be both numeric (got `{}` and `{}`)",
                         base, exp
+                        )
                     ),
                 }
             }
