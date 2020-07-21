@@ -52,6 +52,7 @@ impl<'a> Environment<'a> {
             "disp" => Some(Value::Operator(Disp)),
             "include" => Some(Value::Operator(Include)),
             "eval" => Some(Value::Operator(Eval)),
+            "while" => Some(Value::Operator(While)),
             _ => None,
         }
     }
@@ -72,8 +73,18 @@ impl<'a> Environment<'a> {
         }
     }
 
-    pub fn assign(&mut self, symbol: Symbol, exp: Expression<'a>) {
-        self.values.insert(symbol, exp);
+    pub fn assign(&mut self, symbol: Symbol, exp: Expression<'a>, only_local: bool) {
+        if only_local || (self.values.contains_key(&symbol) && self.lookup(&symbol) == None) {
+            self.values.insert(symbol, exp);
+        } else {
+            match &self.parent {
+                Some(parent_lock) => match parent_lock.write() {
+                    Ok(mut parent) => parent.assign(symbol, exp, only_local),
+                    Err(_) => {} // TODO: do we want to fail loud?
+                },
+                None => self.assign(symbol, exp, true),
+            }
+        }
     }
 }
 

@@ -1,4 +1,4 @@
-use crate::{exp, parse, CallSnapshot, Exception, ExceptionValue as EV, Expression, stdlib};
+use crate::{exp, parse, stdlib, CallSnapshot, Exception, ExceptionValue as EV, Expression};
 use relative_path::RelativePath;
 use std::env;
 use std::fs;
@@ -17,7 +17,7 @@ pub fn resolve_resource<'a>(
                 EV::InvalidIncludePath(String::from(path)),
                 snapshot,
                 format!("`{}` is not in the standard library", path)
-            )
+            ),
         },
         false => {
             let source_path_opt = match via.source() {
@@ -27,16 +27,17 @@ pub fn resolve_resource<'a>(
                 },
                 None => None,
             };
-        
+
             let working_dir = match env::current_dir() {
                 Ok(dir) => dir,
                 Err(_) => exp!(
                     EV::InvalidIncludePath(String::from(path)),
                     snapshot,
-                    "could not establish working directory (the environment is unknown)".to_string()
+                    "could not establish working directory (the environment is unknown)"
+                        .to_string()
                 ),
             };
-        
+
             let relative_dir = match source_path_opt {
                 Some(source_path) => match fs::metadata(&source_path) {
                     Ok(metadata) => match metadata.is_dir() {
@@ -50,7 +51,7 @@ pub fn resolve_resource<'a>(
                 },
                 None => working_dir,
             };
-        
+
             let relative_dir_composed = match RelativePath::from_path(&path) {
                 Ok(relative) => relative,
                 Err(err) => exp!(

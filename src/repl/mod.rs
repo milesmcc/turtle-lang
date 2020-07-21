@@ -1,10 +1,10 @@
-use rustyline::validate::{ValidationContext, ValidationResult, Validator};
-use std::sync::{Arc, RwLock};
 use rustyline::error::ReadlineError;
+use rustyline::validate::{ValidationContext, ValidationResult, Validator};
 use rustyline::Editor;
 use rustyline_derive::{Completer, Helper, Highlighter, Hinter};
+use std::sync::{Arc, RwLock};
 
-use crate::{parse, Environment, CallSnapshot};
+use crate::{parse, CallSnapshot, Environment};
 
 #[derive(Completer, Helper, Highlighter, Hinter)]
 struct ReplHelper {}

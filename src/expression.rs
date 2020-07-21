@@ -60,6 +60,7 @@ pub enum Operator {
     Disp,
     Include,
     Eval,
+    While,
 }
 
 #[derive(Debug, Clone, PartialEq, PartialOrd)]
@@ -199,8 +200,11 @@ impl<'a> Expression<'a> {
                                 // is active (as the thread would deadlock).
                                 let arg_evaled = arg_expr.clone().eval(snap());
                                 for exp in &mut expressions {
-                                    exp.get_env_mut()
-                                        .assign(symbol.clone(), arg_evaled.clone()?);
+                                    exp.get_env_mut().assign(
+                                        symbol.clone(),
+                                        arg_evaled.clone()?,
+                                        true,
+                                    );
                                 }
                             }
                             let mut result = Expression::nil();
@@ -215,7 +219,11 @@ impl<'a> Expression<'a> {
                         } => {
                             for (symbol, arg_expr) in params.iter().zip(arguments.iter()) {
                                 for exp in &mut expressions {
-                                    exp.get_env_mut().assign(symbol.clone(), arg_expr.clone());
+                                    exp.get_env_mut().assign(
+                                        symbol.clone(),
+                                        arg_expr.clone(),
+                                        true,
+                                    );
                                 }
                             }
                             let mut result = Expression::nil();
@@ -380,7 +388,8 @@ impl Operator {
                     .expect("label requires a second argument for the assigned expression")
                     .clone()
                     .eval(snap())?;
-                expr.get_env_mut().assign(symbol, assigned_expr.clone());
+                expr.get_env_mut()
+                    .assign(symbol, assigned_expr.clone(), false);
                 Ok(assigned_expr)
             }
             Sum => {
@@ -523,6 +532,21 @@ impl Operator {
                     );
                 }
                 arguments.get_mut(0).unwrap().eval(snap())?.eval(snap())
+            }
+            While => {
+                exp_assert!(
+                    arguments.len() == 2,
+                    EV::ArgumentMismatch,
+                    snapshot,
+                    format!("while requires 2 arguments (received {})", arguments.len())
+                );
+                let condition = arguments.get(0).unwrap();
+                let action = arguments.get(1).unwrap();
+                let mut result = Expression::nil();
+                while condition.clone().eval(snap())? != Expression::nil() {
+                    result = action.clone().eval(snap())?
+                }
+                Ok(result)
             }
         }
     }

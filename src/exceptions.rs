@@ -1,4 +1,4 @@
-use crate::{parser, CallSnapshot, Keyword, Value, SourcePosition, Symbol};
+use crate::{parser, CallSnapshot, Keyword, SourcePosition, Symbol, Value};
 use ansi_term::{Color, Style};
 use std::error::Error;
 use std::fmt;
@@ -53,14 +53,20 @@ impl ExceptionValue<'_> {
 
         match self {
             Other(val, _) => val.clone(),
-            UndefinedSymbol(symbol) => format!("the symbol `{}` has no assigned value (did you mean to quote this symbol?)", symbol),
+            UndefinedSymbol(symbol) => format!(
+                "the symbol `{}` has no assigned value (did you mean to quote this symbol?)",
+                symbol
+            ),
             ArgumentMismatch => {
                 String::from("this function requires a different number of arguments")
             }
             InvalidArgument => String::from("the arguments to this function are invalid"),
             Syntax => String::from("the syntax of this code is incorrect"),
             InvalidIncludePath(path) => format!("no code is available for import from `{}`", path),
-            InvalidOperator(value) => format!("`{}` is not a valid list operator (did you mean to quote this list?)", value),
+            InvalidOperator(value) => format!(
+                "`{}` is not a valid list operator (did you mean to quote this list?)",
+                value
+            ),
         }
     }
 

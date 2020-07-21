@@ -13,9 +13,9 @@ pub mod environment;
 pub mod exceptions;
 pub mod expression;
 pub mod parser;
+pub mod repl;
 pub mod resolver;
 pub mod source;
-pub mod repl;
 pub mod stdlib;
 
 pub use call_snapshot::CallSnapshot;
@@ -33,11 +33,11 @@ fn main() {
             for mut expression in expressions {
                 let snapshot = CallSnapshot::root(&expression);
                 match expression.eval(snapshot) {
-                    Ok(_) => {},
-                    Err(err) => {eprintln!("{}", err)}
+                    Ok(_) => {}
+                    Err(err) => eprintln!("{}", err),
                 }
             }
-        },
+        }
         Err(err) => eprintln!("{}", err),
     };
     repl::spawn(env);
