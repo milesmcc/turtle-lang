@@ -451,23 +451,29 @@ impl Operator {
                 Ok(Expression::nil())
             }
             Label => {
-                let sym_exp = arguments
-                    .get(0)
-                    .expect("`label` requires an argument for the symbol")
-                    .clone()
-                    .eval(snap())?;
+                exp_assert!(
+                    arguments.len() == 2,
+                    EV::ArgumentMismatch,
+                    snap(),
+                    format!(
+                        "`label` requires 2 arguments, but {} given",
+                        arguments.len()
+                    )
+                );
+                let sym_exp = arguments.get(0).unwrap().clone().eval(snap())?;
                 let symbol = match sym_exp.into_value() {
                     Symbol(sym) => sym,
-                    _ => panic!(
+                    _ => exp!(
+                        EV::InvalidArgument,
+                        snap(),
+                        format!(
                         "first arg of label must evaluate to a symbol (received `{}`)",
                         arguments.get(0).unwrap()
+                        )
                     ),
                 };
-                let assigned_expr = arguments
-                    .get(1)
-                    .expect("`label` requires a second argument for the assigned expression")
-                    .clone()
-                    .eval(snap())?;
+
+                let assigned_expr = arguments.get_mut(1).unwrap().eval(snap())?;
                 expr.get_env_mut()
                     .assign(symbol, assigned_expr.clone(), false);
                 Ok(assigned_expr)
