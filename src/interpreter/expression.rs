@@ -349,14 +349,31 @@ impl Operator {
                 return Ok(Expression::t());
             }
             Car => {
-                let list = arguments
-                    .get_mut(0)
-                    .expect("car requires an argument")
-                    .eval(snapshot)?;
+                exp_assert!(
+                    arguments.len() == 1,
+                    EV::ArgumentMismatch,
+                    snap(),
+                    format!("`car` requires one argument (got {})", arguments.len())
+                );
+
+                let list = arguments.get_mut(0).unwrap().eval(snap())?;
+
                 match list.value {
-                    Value::List(vals) => Ok(vals.get(0).expect("cannot car empty list").clone()),
-                    _ => panic!("`car` expects a list, got `{}`", list),
+                    Value::List(vals) => {
+                        exp_assert!(
+                            vals.len() > 0,
+                            EV::InvalidArgument,
+                            snap(),
+                            format!("cannot `car` an empty list (nil)")
+                        );
+                        Ok(vals.get(0).unwrap().clone())
                 }
+                    _ => exp!(
+                        EV::InvalidArgument,
+                        snap(),
+                        format!("`car` expects a list, got `{}`", list)
+                    ),
+            }
             }
             Cdr => {
                 let list = arguments
