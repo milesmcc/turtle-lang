@@ -1,3 +1,4 @@
+;; Close-to-primitive operators
 (label 'set label)
 (label 'setq (macro '(identifier value) '(label identifier ,value)))
 
@@ -9,16 +10,17 @@
 (setq third (lambda '(x) '(head (tail (tail x)))))
 (setq fourth (lambda '(x) '(head (tail (tail (tail x))))))
 
-(label 'func (macro 'args '(label (first args) (lambda (second args) (first (tail (tail args)))))))
+(label 'metafunc (macro 'args '(label (first args) (macro (second args) (first (tail (tail args)))))))
+(metafunc func args (label (first args) (lambda (second args) (first (tail (tail args))))))
 
 ;; Basic math operators  
 (setq + sum)
 (setq * prod)
 (func - (a b) (+ a (* -1 b)))
-(setq / (lambda (a b) (* a (pow b -1))))
+(func / (a b) (* a (pow b -1)))
 (setq % modulo)
 
-(setq ++ (macro (a) (set a (+ ,a 1)) ,a))
-(setq -- (macro (a) (set a (- ,a 1)) ,a))
+(metafunc ++ (a) (set a (+ ,a 1)))
+(metafunc -- (a) (set a (+ ,a -1)))
 
 (setq zen "The Zen of Turtle (to be written...)")
