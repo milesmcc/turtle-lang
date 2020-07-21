@@ -1,9 +1,9 @@
-WHITESPACE = _{ " "+ | "\t"+ | NEWLINE+ }
-COMMENT = _{ "/*" ~ (!"*/" ~ ANY)* ~ "*/" | ("//" | ";;" ) ~ (!NEWLINE ~ ANY)* ~ NEWLINE }
+WHITESPACE = _{ " " | "\t" | NEWLINE }
+COMMENT = _{ ("//" | ";;" ) ~ (!NEWLINE ~ ANY)* ~ NEWLINE }
 
 // Primitives
 list = { "(" ~ expression* ~ ")" }
-symbol = @{ (LETTER | NUMBER | SYMBOL | DASH_PUNCTUATION)+ }
+symbol = @{ (LETTER | NUMBER | SYMBOL | DASH_PUNCTUATION | (!(number) ~ "-") | OTHER_PUNCTUATION )+ }
 keyword = { ":" ~ symbol }
 number = @{ "-"? ~ (ASCII_DIGIT)+ ~ ("." ~ ASCII_DIGIT+)? ~ (^"e" ~ ("+" | "-")? ~ ASCII_DIGIT+)? }
 char = {
@@ -29,4 +29,4 @@ sugar = _{ quote | eval }
 
 expression = _{ sugar | func_notations | primitive }
 
-expressions = _{ (WHITESPACE | COMMENT)* ~ expression+ }
+expressions = _{ SOI ~ expression+ ~ EOI }

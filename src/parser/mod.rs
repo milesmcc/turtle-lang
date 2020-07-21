@@ -24,6 +24,10 @@ pub fn parse<'a>(
         Ok(pairs) => {
             let mut exps = Vec::new();
             for pair in pairs {
+                if pair.as_rule() == Rule::EOI {
+                    // SOI isn't given
+                    continue;
+                }
                 exps.push(
                     build_expression(pair.clone(), env.clone(), source.clone())?
                         .with_source(SourcePosition::from_pair(&pair, &source)),
@@ -117,12 +121,12 @@ fn build_expression<'a>(
                     Rule::lambda_def => Value::Lambda {
                         params: symbols,
                         expressions,
-                        collapse_input
+                        collapse_input,
                     },
                     Rule::macro_def => Value::Macro {
                         params: symbols,
                         expressions,
-                        collapse_input
+                        collapse_input,
                     },
                     _ => unreachable!(),
                 },
@@ -149,11 +153,10 @@ fn build_expression<'a>(
             }
             Ok(Expression::new(Value::List(elements), env))
         }
-
-        _ => todo!(
-            "unknown syntax element `{}` ({:?})",
-            pair.as_str(),
-            pair.as_rule()
-        ),
+        _ => Err(Exception::new(
+            EV::Syntax,
+            None,
+            Some(format!("unknown syntax element `{}`", pair.as_str())),
+        )),
     }
 }
