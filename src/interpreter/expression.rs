@@ -587,9 +587,18 @@ impl Operator {
                 }
             }
             Type => {
+                exp_assert!(
+                    arguments.len() == 1,
+                    EV::ArgumentMismatch,
+                    snap(),
+                    format!(
+                        "`type` expects 1 argument, but {} given",
+                        arguments.len()
+                    )
+                );
                 let arg_type = arguments
                     .get_mut(0)
-                    .expect("`type` requires an argument")
+                    .unwrap()
                     .eval(snap())?
                     .into_value()
                     .as_type();
