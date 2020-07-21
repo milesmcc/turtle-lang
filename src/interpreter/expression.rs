@@ -89,7 +89,7 @@ impl<'a> Value<'a> {
     pub fn as_type(&self) -> Self {
         use Value::*;
 
-        Value::Keyword(crate::expression::Keyword::new(match self {
+        Value::Keyword(crate::Keyword::new(match self {
             List(_) => "list".to_string(),
             Number(_) => "number".to_string(),
             Text(_) => "text".to_string(),

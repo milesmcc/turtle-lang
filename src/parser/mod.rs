@@ -7,7 +7,7 @@ use pest::Parser;
 use std::sync::{Arc, RwLock};
 
 #[derive(Parser)]
-#[grammar = "syntax.pest"]
+#[grammar = "parser/syntax.pest"]
 pub struct SyntaxParser;
 
 pub fn parse<'a>(

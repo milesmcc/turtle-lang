@@ -8,26 +8,21 @@ extern crate rustyline_derive;
 extern crate pest_derive;
 extern crate relative_path;
 
-pub mod call_snapshot;
-pub mod environment;
-pub mod exceptions;
-pub mod expression;
+pub mod interpreter;
 pub mod parser;
 pub mod repl;
-pub mod resolver;
-pub mod source;
 pub mod stdlib;
 
-pub use call_snapshot::CallSnapshot;
-pub use environment::Environment;
-pub use exceptions::{Exception, ExceptionValue};
-pub use expression::{Expression, Keyword, Operator, Symbol, Value};
+pub use interpreter::call_snapshot::CallSnapshot;
+pub use interpreter::environment::Environment;
+pub use interpreter::exceptions::{Exception, ExceptionValue};
+pub use interpreter::expression::{Expression, Keyword, Operator, Symbol, Value};
+pub use interpreter::resolver::resolve_resource;
+pub use interpreter::source::{Source, SourcePosition};
 pub use parser::parse;
-pub use resolver::resolve_resource;
-pub use source::{Source, SourcePosition};
 
 fn main() {
-    let env = Arc::new(RwLock::new(environment::Environment::root()));
+    let env = Arc::new(RwLock::new(Environment::root()));
     match parse("(include \"@prelude\")", "<builtin>", env.clone()) {
         Ok(expressions) => {
             for mut expression in expressions {
