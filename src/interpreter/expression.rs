@@ -531,24 +531,28 @@ impl Operator {
                 }
             }
             Modulo => {
-                let val = arguments
-                    .get_mut(0)
-                    .expect("`modulo` requires a first argument")
-                    .eval(snap())?
-                    .into_value();
-                let modu = arguments
-                    .get_mut(1)
-                    .expect("`modulo` requires a second argument")
-                    .eval(snap())?
-                    .into_value();
+                exp_assert!(
+                    arguments.len() == 2,
+                    EV::ArgumentMismatch,
+                    snap(),
+                    format!(
+                        "`modulo` expects 2 arguments, but {} given",
+                        arguments.len()
+                    )
+                );
+                let val = arguments.get_mut(0).unwrap().eval(snap())?.into_value();
+                let modu = arguments.get_mut(1).unwrap().eval(snap())?.into_value();
                 match (val, modu) {
                     (Number(first), Number(second)) => Ok(Expression::new(
                         Value::Number(first % second),
                         expr.env.clone(),
                     )),
-                    (base, exp) => panic!(
+                    (base, exp) => exp!(
+                        EV::InvalidArgument,
+                        snap(),
+                        format!(
                         "`modulo` requires its arguments to be both numeric (got `{}` and `{}`)",
-                        base, exp
+                        base, exp)
                     ),
                 }
             }
