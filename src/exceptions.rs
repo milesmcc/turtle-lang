@@ -1,4 +1,4 @@
-use crate::{parser, CallSnapshot, Keyword, SourcePosition, Symbol};
+use crate::{parser, CallSnapshot, Keyword, Value, SourcePosition, Symbol};
 use ansi_term::{Color, Style};
 use std::error::Error;
 use std::fmt;
@@ -19,7 +19,7 @@ macro_rules! exp {
 
 #[macro_export]
 macro_rules! exp_opt {
-    ($value:expr, $($rest:expr)*) => {
+    ($value:expr $(, $rest:expr)*) => {
         match $value {
             Some(value) => value,
             None => exp!($($rest)*)
@@ -27,29 +27,40 @@ macro_rules! exp_opt {
     };
 }
 
+#[macro_export]
+macro_rules! exp_assert {
+    ($test:expr $(, $rest:expr)*) => {
+        if (!$test) {
+            exp!($($rest),*)
+        }
+    };
+}
+
 #[derive(Debug, Clone)]
-pub enum ExceptionValue {
+pub enum ExceptionValue<'a> {
     Other(String, Keyword),
     UndefinedSymbol(Symbol),
     ArgumentMismatch,
     InvalidArgument,
     Syntax,
     InvalidIncludePath(String),
+    InvalidOperator(Value<'a>),
 }
 
-impl ExceptionValue {
+impl ExceptionValue<'_> {
     pub fn explain(&self) -> String {
         use ExceptionValue::*;
 
         match self {
             Other(val, _) => val.clone(),
-            UndefinedSymbol(symbol) => format!("the symbol `{}` has no assigned value (did you mean to quote?)", symbol),
+            UndefinedSymbol(symbol) => format!("the symbol `{}` has no assigned value (did you mean to quote this symbol?)", symbol),
             ArgumentMismatch => {
                 String::from("this function requires a different number of arguments")
             }
             InvalidArgument => String::from("the arguments to this function are invalid"),
             Syntax => String::from("the syntax of this code is incorrect"),
             InvalidIncludePath(path) => format!("no code is available for import from `{}`", path),
+            InvalidOperator(value) => format!("`{}` is not a valid list operator (did you mean to quote this list?)", value),
         }
     }
 
@@ -63,11 +74,12 @@ impl ExceptionValue {
             Syntax => Keyword::from_str("syntax-exp"),
             InvalidArgument => Keyword::from_str("invalid-argument-exp"),
             InvalidIncludePath(_) => Keyword::from_str("invalid-include-path-exp"),
+            InvalidOperator(_) => Keyword::from_str("invalid-operator-exp"),
         }
     }
 }
 
-impl fmt::Display for ExceptionValue {
+impl fmt::Display for ExceptionValue<'_> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{} ({})", self.explain(), self.keyword())
     }
@@ -75,7 +87,7 @@ impl fmt::Display for ExceptionValue {
 
 #[derive(Debug, Clone)]
 pub struct Exception<'a> {
-    value: ExceptionValue,
+    value: ExceptionValue<'a>,
     snapshot: Option<Arc<RwLock<CallSnapshot<'a>>>>,
     additional_sources: Vec<SourcePosition>,
     note: Option<String>,
@@ -83,7 +95,7 @@ pub struct Exception<'a> {
 
 impl<'a> Exception<'a> {
     pub fn new(
-        value: ExceptionValue,
+        value: ExceptionValue<'a>,
         snapshot: Option<Arc<RwLock<CallSnapshot<'a>>>>,
         note: Option<String>,
     ) -> Self {

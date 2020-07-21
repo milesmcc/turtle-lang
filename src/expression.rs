@@ -2,7 +2,7 @@ use std::fmt;
 use std::sync::{Arc, RwLock, RwLockReadGuard, RwLockWriteGuard};
 
 use crate::{
-    exp, resolve_resource, CallSnapshot, Environment, Exception, ExceptionValue as EV,
+    exp, exp_assert, resolve_resource, CallSnapshot, Environment, Exception, ExceptionValue as EV,
     SourcePosition,
 };
 
@@ -81,7 +81,7 @@ pub enum Value<'a> {
     Macro {
         params: Vec<Symbol>,
         expressions: Vec<Expression<'a>>,
-    }
+    },
 }
 
 impl<'a> Value<'a> {
@@ -208,15 +208,14 @@ impl<'a> Expression<'a> {
                                 result = exp.eval(snap())?;
                             }
                             Ok(result)
-                        },
+                        }
                         Macro {
                             params,
                             mut expressions,
                         } => {
                             for (symbol, arg_expr) in params.iter().zip(arguments.iter()) {
                                 for exp in &mut expressions {
-                                    exp.get_env_mut()
-                                        .assign(symbol.clone(), arg_expr.clone());
+                                    exp.get_env_mut().assign(symbol.clone(), arg_expr.clone());
                                 }
                             }
                             let mut result = Expression::nil();
@@ -225,11 +224,7 @@ impl<'a> Expression<'a> {
                             }
                             Ok(result)
                         }
-                        val => unimplemented!(
-                            "unimplemented operator `{}` in list `{}`",
-                            val,
-                            self.value
-                        ),
+                        val => exp!(EV::InvalidOperator(val), snapshot),
                     }
                 } else {
                     Ok(self.clone())
@@ -277,15 +272,18 @@ impl Operator {
                 }
                 Ok(arguments.get(0).unwrap().clone())
             }
-            Atom => match arguments
-                .get_mut(0)
-                .expect("atom requires one argument")
-                .eval(snapshot)?
-                .into_value()
-            {
-                List(_) => Ok(Expression::new(Value::List(vec![]), expr.env.clone())),
-                _ => Ok(Expression::new(Value::True, expr.env.clone())),
-            },
+            Atom => {
+                exp_assert!(
+                    arguments.len() == 1,
+                    EV::ArgumentMismatch,
+                    snapshot,
+                    format!("atom requires 1 argument (received {})", arguments.len())
+                );
+                match arguments.get_mut(0).unwrap().eval(snapshot)?.into_value() {
+                    List(_) => Ok(Expression::new(Value::List(vec![]), expr.env.clone())),
+                    _ => Ok(Expression::new(Value::True, expr.env.clone())),
+                }
+            }
             Eq => {
                 let first = arguments
                     .get_mut(0)
@@ -515,7 +513,7 @@ impl Operator {
                 };
 
                 resolve_resource(&path, snapshot, expr)
-            },
+            }
             Eval => {
                 if arguments.len() != 1 {
                     exp!(
@@ -525,7 +523,7 @@ impl Operator {
                     );
                 }
                 arguments.get_mut(0).unwrap().eval(snap())?.eval(snap())
-            },
+            }
         }
     }
 }
