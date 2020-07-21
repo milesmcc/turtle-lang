@@ -376,10 +376,13 @@ impl Operator {
             }
             }
             Cdr => {
-                let list = arguments
-                    .get_mut(0)
-                    .expect("`cdr` requires an argument")
-                    .eval(snapshot)?;
+                exp_assert!(
+                    arguments.len() == 1,
+                    EV::ArgumentMismatch,
+                    snap(),
+                    format!("`cdr` requires 1 argument, but {} given", arguments.len())
+                );
+                let list = arguments.get_mut(0).unwrap().eval(snap())?;
                 match list.value {
                     Value::List(mut vals) => {
                         if !vals.is_empty() {
@@ -387,7 +390,11 @@ impl Operator {
                         }
                         Ok(Expression::new(Value::List(vals), expr.env.clone()))
                     }
-                    _ => panic!("`cdr` expects a list, got `{}`", list),
+                    val => exp!(
+                        EV::InvalidArgument,
+                        snap(),
+                        format!("`cdr` expects a list, not `{}`", val)
+                    ),
                 }
             }
             Cons => {
