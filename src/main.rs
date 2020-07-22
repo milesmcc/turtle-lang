@@ -11,16 +11,16 @@ extern crate relative_path;
 pub mod interpreter;
 pub mod parser;
 pub mod repl;
-pub mod stdlib;
 pub mod spec;
+pub mod stdlib;
 
 pub use interpreter::call_snapshot::CallSnapshot;
 pub use interpreter::environment::Environment;
 pub use interpreter::exceptions::{Exception, ExceptionValue};
-pub use interpreter::expression::{Expression, Keyword, Symbol, Value};
+pub use interpreter::expression::Expression;
 pub use interpreter::resolver::resolve_resource;
 pub use interpreter::source::{Source, SourcePosition};
-pub use interpreter::values::Operator;
+pub use interpreter::values::{Keyword, Operator, Symbol, Value};
 pub use parser::parse;
 
 fn main() {

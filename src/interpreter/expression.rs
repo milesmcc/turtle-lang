@@ -2,85 +2,9 @@ use std::fmt;
 use std::sync::{Arc, RwLock, RwLockReadGuard, RwLockWriteGuard};
 
 use crate::{
-    exp, exp_assert, resolve_resource, CallSnapshot, Environment, Exception, ExceptionValue as EV,
-    SourcePosition, Operator,
+    exp, exp_assert, CallSnapshot, Environment, Exception, ExceptionValue as EV, SourcePosition,
+    Value,
 };
-
-#[derive(Debug, Clone, PartialEq, PartialOrd, Eq, Hash)]
-pub struct Symbol(String);
-
-impl Symbol {
-    pub fn new(val: String) -> Self {
-        Self(val)
-    }
-
-    pub fn from_str(val: &str) -> Self {
-        Self(String::from(val))
-    }
-
-    pub fn string_value(&self) -> &'_ String {
-        &self.0
-    }
-}
-
-#[derive(Debug, Clone, PartialEq, PartialOrd, Eq, Hash)]
-pub struct Keyword(String);
-
-impl Keyword {
-    pub fn new(val: String) -> Self {
-        Self(val)
-    }
-
-    pub fn from_str(val: &str) -> Self {
-        Self(String::from(val))
-    }
-
-    pub fn string_value(&self) -> &'_ String {
-        &self.0
-    }
-}
-
-#[derive(Debug, Clone, PartialEq, PartialOrd)]
-pub enum Value<'a> {
-    List(Vec<Expression<'a>>),
-    Number(f64),
-    Text(String),
-    Keyword(Keyword),
-    Symbol(Symbol),
-    True,
-
-    // Primitive (axiomatic) operators
-    Operator(Operator),
-
-    Lambda {
-        params: Vec<Symbol>,
-        expressions: Vec<Expression<'a>>,
-        collapse_input: bool,
-    },
-    Macro {
-        params: Vec<Symbol>,
-        expressions: Vec<Expression<'a>>,
-        collapse_input: bool,
-    },
-}
-
-impl<'a> Value<'a> {
-    pub fn as_type(&self) -> Self {
-        use Value::*;
-
-        Value::Keyword(crate::Keyword::new(match self {
-            List(_) => "list".to_string(),
-            Number(_) => "number".to_string(),
-            Text(_) => "text".to_string(),
-            Keyword(_) => "keyword".to_string(),
-            Symbol(_) => "symbol".to_string(),
-            Operator(_) => "operator".to_string(),
-            Lambda { .. } => "lambda".to_string(),
-            Macro { .. } => "macro".to_string(),
-            _ => "unknown".to_string(),
-        }))
-    }
-}
 
 #[derive(Debug, Clone)]
 pub struct Expression<'a> {
@@ -198,7 +122,10 @@ impl<'a> Expression<'a> {
                             } else {
                                 exp_assert!(
                                     params.len() == arguments.len(),
-                                    EV::ArgumentMismatch(arguments.len(), format!("{}", params.len())),
+                                    EV::ArgumentMismatch(
+                                        arguments.len(),
+                                        format!("{}", params.len())
+                                    ),
                                     snap()
                                 );
                                 for (symbol, arg_expr) in params.iter().zip(arguments.iter()) {
@@ -249,99 +176,9 @@ impl<'a> Expression<'a> {
     }
 }
 
-impl fmt::Display for Keyword {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, ":{}", self.string_value())
-    }
-}
-
-impl fmt::Display for Symbol {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", self.string_value())
-    }
-}
-
 impl<'a> fmt::Display for Expression<'a> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}", self.value)
-    }
-}
-
-impl<'a> fmt::Display for Value<'a> {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        use Value::*;
-
-        match self {
-            List(vals) => match vals.len() {
-                0 => write!(f, "nil"),
-                _ => write!(
-                    f,
-                    "({})",
-                    vals.iter()
-                        .map(|v| format!("{}", v))
-                        .collect::<Vec<String>>()
-                        .join(" ")
-                ),
-            },
-            Number(val) => write!(f, "{}", val),
-            Text(val) => write!(f, "{}", val),
-            Symbol(val) => write!(f, "{}", val),
-            Keyword(val) => write!(f, "{}", val),
-            True => write!(f, "true"),
-            Lambda {
-                params,
-                expressions,
-                collapse_input,
-            } => write!(
-                f,
-                "<lambda {}{}{} -> {}>",
-                match collapse_input {
-                    true => "",
-                    false => "(",
-                },
-                params
-                    .iter()
-                    .map(|x| format!("{}", x))
-                    .collect::<Vec<String>>()
-                    .join(" "),
-                match collapse_input {
-                    true => "",
-                    false => ")",
-                },
-                expressions
-                    .iter()
-                    .map(|x| format!("{}", x))
-                    .collect::<Vec<String>>()
-                    .join(" ")
-            ),
-            Macro {
-                params,
-                expressions,
-                collapse_input,
-            } => write!(
-                f,
-                "<macro {}{}{} -> {}>",
-                match collapse_input {
-                    true => "",
-                    false => "(",
-                },
-                params
-                    .iter()
-                    .map(|x| format!("{}", x))
-                    .collect::<Vec<String>>()
-                    .join(" "),
-                match collapse_input {
-                    true => "",
-                    false => ")",
-                },
-                expressions
-                    .iter()
-                    .map(|x| format!("{}", x))
-                    .collect::<Vec<String>>()
-                    .join(" ")
-            ),
-            _ => write!(f, "<{}>", format!("{:?}", self).to_lowercase()),
-        }
     }
 }
 

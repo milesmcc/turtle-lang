@@ -1,4 +1,7 @@
-use crate::{exp, exp_assert, CallSnapshot, Exception, ExceptionValue as EV, Expression, Value, resolve_resource};
+use crate::{
+    exp, exp_assert, resolve_resource, CallSnapshot, Exception, ExceptionValue as EV, Expression,
+    Value,
+};
 use std::fmt;
 use std::sync::{Arc, RwLock};
 

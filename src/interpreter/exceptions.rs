@@ -59,8 +59,7 @@ impl ExceptionValue<'_> {
             ),
             ArgumentMismatch(given, expected) => format!(
                 "wrong number of arguments: {} required, but {} given",
-                expected,
-                given,
+                expected, given,
             ),
             InvalidArgument => String::from("the arguments to this function are invalid"),
             Syntax => String::from("the syntax of this code is incorrect"),

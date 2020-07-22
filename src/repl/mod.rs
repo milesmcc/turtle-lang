@@ -7,7 +7,7 @@ use rustyline::validate::Validator;
 use rustyline::validate::{self, MatchingBracketValidator};
 use rustyline::Editor;
 use rustyline::{CompletionType, Config, Context};
-use rustyline_derive::{Helper};
+use rustyline_derive::Helper;
 use std::borrow::Cow::{self, Borrowed, Owned};
 use std::sync::{Arc, RwLock};
 
