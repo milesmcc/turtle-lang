@@ -30,6 +30,7 @@ pub enum Operator {
     Macro,
     List,
     Catch,
+    Throw,
 }
 
 impl fmt::Display for Operator {
@@ -473,6 +474,18 @@ impl Operator {
                         }
                     }
                 }
+            }
+            Throw => {
+                exp_assert!(
+                    arguments.len() == 1,
+                    EV::ArgumentMismatch(arguments.len(), "1".to_string()),
+                    snapshot
+                );
+                Err(Exception::new(
+                    EV::Other(arguments.get_mut(0).unwrap().eval(snap())?),
+                    Some(snap()),
+                    None,
+                ))
             }
         }
     }
