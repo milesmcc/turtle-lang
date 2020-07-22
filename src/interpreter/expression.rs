@@ -72,7 +72,7 @@ impl<'a> Expression<'a> {
     ) -> Result<Self, Exception<'a>> {
         use Value::*;
 
-        let snapshot = CallSnapshot::new(&self, &parent_snapshot);
+        let snapshot = CallSnapshot::new(&self, &parent_snapshot)?;
 
         let snap = || snapshot.clone();
 

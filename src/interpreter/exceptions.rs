@@ -45,6 +45,7 @@ pub enum ExceptionValue<'a> {
     Syntax,
     InvalidIncludePath(String),
     InvalidOperator(Value<'a>),
+    StackOverflow
 }
 
 impl<'a> ExceptionValue<'a> {
@@ -68,6 +69,7 @@ impl<'a> ExceptionValue<'a> {
                 "`{}` is not a valid list operator (did you mean to quote this list?)",
                 value
             ),
+            StackOverflow => "the call stack exceeded the limit (500)".to_string()
         }
     }
 
@@ -84,6 +86,7 @@ impl<'a> ExceptionValue<'a> {
             InvalidArgument => Expression::new(Value::Keyword(Keyword::from_str("invalid-argument-exp")), root_env),
             InvalidIncludePath(_) => Expression::new(Value::Keyword(Keyword::from_str("invalid-include-path-exp")), root_env),
             InvalidOperator(_) => Expression::new(Value::Keyword(Keyword::from_str("invalid-operator-exp")), root_env),
+            StackOverflow => Expression::new(Value::Keyword(Keyword::from_str("stack-overflow-exp")), root_env),
         }
     }
 }

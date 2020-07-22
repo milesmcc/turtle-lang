@@ -79,7 +79,7 @@ pub fn resolve_resource<'a>(
 
     let mut return_val = Expression::nil();
     for mut exp in parsed {
-        return_val = exp.eval(CallSnapshot::new(&exp, &snapshot))?;
+        return_val = exp.eval(CallSnapshot::new(&exp, &snapshot)?)?;
     }
     Ok(return_val)
 }

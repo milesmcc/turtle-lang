@@ -1,4 +1,4 @@
-use crate::Expression;
+use crate::{exp, Exception, ExceptionValue as EV, Expression};
 use ansi_term::Color;
 use std::fmt;
 use std::sync::{Arc, RwLock};
@@ -7,6 +7,7 @@ use std::sync::{Arc, RwLock};
 pub struct CallSnapshot<'a> {
     parent: Option<Arc<RwLock<Self>>>,
     expression: Expression<'a>,
+    depth: usize,
 }
 
 impl<'a> CallSnapshot<'a> {
@@ -14,14 +15,33 @@ impl<'a> CallSnapshot<'a> {
         Arc::new(RwLock::new(CallSnapshot {
             parent: None,
             expression: exp.clone(),
+            depth: 0,
         }))
     }
 
-    pub fn new(exp: &Expression<'a>, parent: &Arc<RwLock<Self>>) -> Arc<RwLock<Self>> {
-        Arc::new(RwLock::new(CallSnapshot {
+    pub fn new(
+        exp: &Expression<'a>,
+        parent: &Arc<RwLock<Self>>,
+    ) -> Result<Arc<RwLock<Self>>, Exception<'a>> {
+        // TODO: make read lock check return an exception instead of panicking
+        let depth = parent
+            .read()
+            .expect("could not access call snapshot parent (are threads locked?)")
+            .depth
+            + 1;
+        if depth > 500 {
+            exp!(
+                EV::StackOverflow,
+                parent,
+                "this can happen when recursion goes too deep; verify there aren't any endless loops, or consider using `while` instead".to_string()
+            )
+        }
+
+        Ok(Arc::new(RwLock::new(CallSnapshot {
             parent: Some(parent.clone()),
             expression: exp.clone(),
-        }))
+            depth,
+        })))
     }
 
     pub fn expression(&self) -> &'_ Expression<'a> {
