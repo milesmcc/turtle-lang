@@ -17,9 +17,10 @@ pub mod spec;
 pub use interpreter::call_snapshot::CallSnapshot;
 pub use interpreter::environment::Environment;
 pub use interpreter::exceptions::{Exception, ExceptionValue};
-pub use interpreter::expression::{Expression, Keyword, Operator, Symbol, Value};
+pub use interpreter::expression::{Expression, Keyword, Symbol, Value};
 pub use interpreter::resolver::resolve_resource;
 pub use interpreter::source::{Source, SourcePosition};
+pub use interpreter::values::Operator;
 pub use parser::parse;
 
 fn main() {

@@ -40,7 +40,7 @@ macro_rules! exp_assert {
 pub enum ExceptionValue<'a> {
     Other(String, Keyword),
     UndefinedSymbol(Symbol),
-    ArgumentMismatch,
+    ArgumentMismatch(usize, String),
     InvalidArgument,
     Syntax,
     InvalidIncludePath(String),
@@ -57,9 +57,11 @@ impl ExceptionValue<'_> {
                 "the symbol `{}` has no assigned value (did you mean to quote this symbol?)",
                 symbol
             ),
-            ArgumentMismatch => {
-                String::from("this function requires a different number of arguments")
-            }
+            ArgumentMismatch(given, expected) => format!(
+                "wrong number of arguments: {} required, but {} given",
+                expected,
+                given,
+            ),
             InvalidArgument => String::from("the arguments to this function are invalid"),
             Syntax => String::from("the syntax of this code is incorrect"),
             InvalidIncludePath(path) => format!("no code is available for import from `{}`", path),
@@ -76,7 +78,7 @@ impl ExceptionValue<'_> {
         match self {
             Other(_, keyword) => keyword.clone(),
             UndefinedSymbol(_) => Keyword::from_str("undefined-symbol-exp"),
-            ArgumentMismatch => Keyword::from_str("argument-mismatch-exp"),
+            ArgumentMismatch(_, _) => Keyword::from_str("argument-mismatch-exp"),
             Syntax => Keyword::from_str("syntax-exp"),
             InvalidArgument => Keyword::from_str("invalid-argument-exp"),
             InvalidIncludePath(_) => Keyword::from_str("invalid-include-path-exp"),
