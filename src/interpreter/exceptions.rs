@@ -1,4 +1,4 @@
-use crate::{parser, CallSnapshot, Keyword, SourcePosition, Symbol, Value};
+use crate::{parser, CallSnapshot, Keyword, SourcePosition, Symbol, Value, Expression, Environment};
 use ansi_term::{Color, Style};
 use std::error::Error;
 use std::fmt;
@@ -38,7 +38,7 @@ macro_rules! exp_assert {
 
 #[derive(Debug, Clone)]
 pub enum ExceptionValue<'a> {
-    Other(String, Keyword),
+    Other(Expression<'a>),
     UndefinedSymbol(Symbol),
     ArgumentMismatch(usize, String),
     InvalidArgument,
@@ -47,12 +47,12 @@ pub enum ExceptionValue<'a> {
     InvalidOperator(Value<'a>),
 }
 
-impl ExceptionValue<'_> {
+impl<'a> ExceptionValue<'a> {
     pub fn explain(&self) -> String {
         use ExceptionValue::*;
 
         match self {
-            Other(val, _) => val.clone(),
+            Other(exp) => format!("{}", exp),
             UndefinedSymbol(symbol) => format!(
                 "the symbol `{}` has no assigned value (did you mean to quote this symbol?)",
                 symbol
@@ -71,24 +71,26 @@ impl ExceptionValue<'_> {
         }
     }
 
-    pub fn keyword(&self) -> Keyword {
+    pub fn into_expression(self) -> Expression<'a> {
         use ExceptionValue::*;
 
+        let root_env = Arc::new(RwLock::new(Environment::root()));
+
         match self {
-            Other(_, keyword) => keyword.clone(),
-            UndefinedSymbol(_) => Keyword::from_str("undefined-symbol-exp"),
-            ArgumentMismatch(_, _) => Keyword::from_str("argument-mismatch-exp"),
-            Syntax => Keyword::from_str("syntax-exp"),
-            InvalidArgument => Keyword::from_str("invalid-argument-exp"),
-            InvalidIncludePath(_) => Keyword::from_str("invalid-include-path-exp"),
-            InvalidOperator(_) => Keyword::from_str("invalid-operator-exp"),
+            Other(expression) => expression,
+            UndefinedSymbol(_) => Expression::new(Value::Keyword(Keyword::from_str("undefined-symbol-exp")), root_env),
+            ArgumentMismatch(_, _) => Expression::new(Value::Keyword(Keyword::from_str("argument-mismatch-exp")), root_env),
+            Syntax => Expression::new(Value::Keyword(Keyword::from_str("syntax-exp")), root_env),
+            InvalidArgument => Expression::new(Value::Keyword(Keyword::from_str("invalid-argument-exp")), root_env),
+            InvalidIncludePath(_) => Expression::new(Value::Keyword(Keyword::from_str("invalid-include-path-exp")), root_env),
+            InvalidOperator(_) => Expression::new(Value::Keyword(Keyword::from_str("invalid-operator-exp")), root_env),
         }
     }
 }
 
 impl fmt::Display for ExceptionValue<'_> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{} ({})", self.explain(), self.keyword())
+        write!(f, "{} ({})", self.explain(), self.clone().into_expression())
     }
 }
 
@@ -112,6 +114,10 @@ impl<'a> Exception<'a> {
             note,
             additional_sources: vec![],
         }
+    }
+
+    pub fn into_value(self) -> ExceptionValue<'a> {
+        self.value
     }
 }
 
@@ -142,7 +148,7 @@ impl fmt::Display for Exception<'_> {
             Color::Red.bold().paint("error"),
             Color::Blue.bold().paint(" ┬ "),
             Style::new().paint("uncaught exception"),
-            Color::Yellow.paint(format!("{}", self.value.keyword()))
+            Color::Yellow.paint(format!("{}", self.value.clone().into_expression()))
         )?;
 
         match &self.snapshot {

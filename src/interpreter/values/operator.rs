@@ -1,6 +1,6 @@
 use crate::{
-    exp, exp_assert, resolve_resource, CallSnapshot, Exception, ExceptionValue as EV, Expression,
-    Value,
+    exp, exp_assert, resolve_resource, CallSnapshot, Environment, Exception, ExceptionValue as EV,
+    Expression, Value,
 };
 use std::fmt;
 use std::sync::{Arc, RwLock};
@@ -29,6 +29,7 @@ pub enum Operator {
     Lambda,
     Macro,
     List,
+    Catch,
 }
 
 impl fmt::Display for Operator {
@@ -390,7 +391,7 @@ impl Operator {
             crate::Operator::Lambda | crate::Operator::Macro => {
                 exp_assert!(
                     arguments.len() >= 2,
-                    EV::ArgumentMismatch(arguments.len(), "2".to_string()),
+                    EV::ArgumentMismatch(arguments.len(), "2+".to_string()),
                     snapshot
                 );
 
@@ -449,6 +450,29 @@ impl Operator {
                     args_evaled.push(argument.eval(snap())?);
                 }
                 Ok(Expression::new(Value::List(args_evaled), expr.clone_env()))
+            }
+            Catch => {
+                exp_assert!(
+                    arguments.len() == 2,
+                    EV::ArgumentMismatch(arguments.len(), "2".to_string()),
+                    snapshot
+                );
+                let action = arguments.get_mut(0).unwrap().eval(snap());
+                let catch_func = arguments.get_mut(1).unwrap().eval(snap())?;
+                match action {
+                    Ok(exp) => Ok(exp),
+                    Err(err) => {
+                        // TODO: remove extra clone
+                        match catch_func.clone().into_value() {
+                            Value::Lambda{..} => Expression::new(Value::List(vec![catch_func.clone(), err.into_value().into_expression()]), Environment::with_parent(expr.clone_env())).eval(snapshot),
+                            _ => exp!(
+                                EV::InvalidArgument,
+                                snapshot,
+                                format!("the second argument of `catch` must be a lambda expression (got `{}`)", catch_func)
+                            )
+                        }
+                    }
+                }
             }
         }
     }

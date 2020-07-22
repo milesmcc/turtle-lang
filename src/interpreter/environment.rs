@@ -56,6 +56,7 @@ impl<'a> Environment<'a> {
             "macro" => Some(Value::Operator(Macro)),
             "lambda" => Some(Value::Operator(Lambda)),
             "list" => Some(Value::Operator(List)),
+            "catch" => Some(Value::Operator(Catch)),
             _ => None,
         }
     }
