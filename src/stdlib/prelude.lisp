@@ -13,11 +13,13 @@
 (label 'metafunc (macro 'args '(label (first args) (macro (second args) (first (tail (tail args)))))))
 (metafunc func args (label (first args) (lambda (second args) (first (tail (tail args))))))
 
+(metafunc do something (cons lambda (cons () something)))
+
 ;; Basic math operators  
 (setq + sum)
 (setq * prod)
 (func - (a b) (+ a (* -1 b)))
-(func / (a b) (* a (pow b -1)))
+(func / (a b) (* a (exp b -1)))
 (setq % modulo)
 
 (metafunc ++ (a) (set a (+ ,a 1)))

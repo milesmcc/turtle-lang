@@ -31,7 +31,7 @@ macro_rules! exp_opt {
 macro_rules! exp_assert {
     ($test:expr $(, $rest:expr)*) => {
         if (!$test) {
-            exp!($($rest),*)
+            exp!($($rest),*);
         }
     };
 }

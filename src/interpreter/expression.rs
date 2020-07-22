@@ -411,8 +411,7 @@ impl Operator {
                         vals.insert(0, first);
                         Ok(Expression::new(Value::List(vals), expr.env.clone()))
                     }
-                    _ => exp_assert!(
-                        arguments.len() > 1,
+                    _ => exp!(
                         EV::InvalidArgument,
                         snap(),
                         format!(
@@ -436,7 +435,7 @@ impl Operator {
                                 )
                             );
                             let cond = { elems.get_mut(0).unwrap() };
-                            if cond.eval(snap())?.into_value() == Value::True {
+                            if cond.eval(snap())? != Expression::nil() {
                                 let val = { elems.get_mut(1).unwrap() };
                                 return val.eval(snapshot);
                             }
@@ -775,7 +774,7 @@ impl<'a> fmt::Display for Value<'a> {
                 ),
             },
             Number(val) => write!(f, "{}", val),
-            Text(val) => write!(f, "\"{}\"", val),
+            Text(val) => write!(f, "{}", val),
             Symbol(val) => write!(f, "{}", val),
             Keyword(val) => write!(f, "{}", val),
             True => write!(f, "true"),
