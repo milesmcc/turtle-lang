@@ -5,6 +5,7 @@ A Lispy programming language that, minus a small shell, is written in itself. It
 - [] Figure out why `(eq func func)` is false
 - [] Figure out namespaces
 - [] Move each operator into its own file (make an `Operator` trait?)
+- [] Add catch operator
 
 
 (func subst (from to content)
