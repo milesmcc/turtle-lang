@@ -1,6 +1,7 @@
+#[cfg(test)]
 mod tests {
-    #[cfg(test)]
-    pub fn it_initializes() {
-        // TODO!
+    #[test]
+    fn it_initializes() {
+        assert_eq!(true, true);
     }
 }
