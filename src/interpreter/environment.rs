@@ -4,7 +4,7 @@ use std::fmt;
 use std::sync::{Arc, RwLock};
 
 use crate::{
-    exp, CallSnapshot, Exception, ExceptionValue as EV, Expression, Keyword, Operator, Symbol,
+    exp, CallSnapshot, Exception, ExceptionValue as EV, Expression, Operator, Symbol,
     Value,
 };
 
@@ -32,10 +32,7 @@ impl Environment {
     }
 
     pub fn with_parent(mut self, parent: Arc<RwLock<Self>>, namespace: Option<String>) -> Self {
-        self.parents.push(ParentEnvironment {
-            namespace,
-            environment: parent,
-        });
+        self.add_parent(parent, namespace);
         self
     }
 
@@ -52,7 +49,8 @@ impl Environment {
             "cdr" => Some(Value::Operator(Cdr)),
             "cons" => Some(Value::Operator(Cons)),
             "cond" => Some(Value::Operator(Cond)),
-            "label" => Some(Value::Operator(Label)),
+            "export" => Some(Value::Operator(Export)),
+            "let" => Some(Value::Operator(Let)),
             "sum" => Some(Value::Operator(Sum)),
             "prod" => Some(Value::Operator(Prod)),
             "exp" => Some(Value::Operator(Exp)),
@@ -61,7 +59,7 @@ impl Environment {
             "ge" => Some(Value::Operator(Ge)),
             "type" => Some(Value::Operator(Type)),
             "disp" => Some(Value::Operator(Disp)),
-            "include" => Some(Value::Operator(Include)),
+            "import" => Some(Value::Operator(Import)),
             "eval" => Some(Value::Operator(Eval)),
             "while" => Some(Value::Operator(While)),
             "macro" => Some(Value::Operator(Macro)),
@@ -84,8 +82,12 @@ impl Environment {
             }
         } else {
             for parent in &self.parents {
-                if namespace == parent.namespace {
-                    return parent.environment.read().unwrap().resolve_symbol(symbol, namespace);
+                if &namespace == &parent.namespace {
+                    return parent
+                        .environment
+                        .read()
+                        .unwrap()
+                        .resolve_symbol(symbol, None);
                 }
             }
         }
@@ -94,7 +96,12 @@ impl Environment {
             if parent.namespace.is_some() {
                 continue;
             }
-            if let Some((exp, depth)) = parent.environment.read().unwrap().resolve_symbol(symbol, None) {
+            if let Some((exp, depth)) = parent
+                .environment
+                .read()
+                .unwrap()
+                .resolve_symbol(symbol, None)
+            {
                 if best_match.0.is_none() || depth < best_match.1 {
                     best_match = (Some(exp), depth);
                 }
@@ -130,11 +137,17 @@ impl Environment {
 
     pub fn lookup(&self, symbol: &Symbol) -> Option<Arc<RwLock<Expression>>> {
         let (namespace, identifier) = Self::extract_components(symbol);
-        println!("searching for {:?}::{}", namespace, identifier);
         match self.resolve_symbol(&identifier, namespace) {
             Some((exp, _)) => Some(exp),
             None => None,
         }
+    }
+
+    pub fn add_parent(&mut self, parent: Arc<RwLock<Self>>, namespace: Option<String>) {
+        self.parents.push(ParentEnvironment {
+            namespace,
+            environment: parent,
+        });
     }
 
     pub fn assign(
@@ -160,7 +173,7 @@ impl Environment {
             Ok(lock)
         } else {
             for parent in &self.parents {
-                if parent.namespace == namespace {
+                if &parent.namespace == &namespace {
                     return parent
                         .environment
                         .write()
@@ -168,7 +181,10 @@ impl Environment {
                         .assign(identifier, exp, only_local, snapshot);
                 }
             }
-            exp!(EV::Assignment(symbol, exp), snapshot, "could not find suitable environment for assignment".to_string())
+            exp!(EV::Assignment(symbol, exp), snapshot, format!("could not find suitable environment for assignment (namespace `{}` not available for assignment)", match namespace {
+                Some(value) => value,
+                None => "no namespace".to_string(),
+            }))
         }
     }
 }

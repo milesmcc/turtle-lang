@@ -14,7 +14,8 @@ pub enum Operator {
     Cdr,
     Cons,
     Cond,
-    Label,
+    Export,
+    Let,
     Sum,
     Prod,
     Exp,
@@ -23,7 +24,7 @@ pub enum Operator {
     Ge,
     Type,
     Disp,
-    Include,
+    Import,
     Eval,
     While,
     Lambda,
@@ -199,7 +200,7 @@ impl Operator {
                 }
                 Ok(Expression::nil())
             }
-            Label => {
+            Export | Let => {
                 exp_assert!(
                     arguments.len() == 2,
                     EV::ArgumentMismatch(arguments.len(), "2".to_string()),
@@ -219,7 +220,10 @@ impl Operator {
                 };
 
                 let assigned_expr = arguments.get_mut(1).unwrap().eval(snap(), env.clone())?;
-                env.write().unwrap().assign(symbol, assigned_expr.clone(), false, snap())?;
+                env.write().unwrap().assign(symbol, assigned_expr.clone(), match self {
+                    Export => false,
+                    _ => true,
+                }, snap())?;
                 Ok(assigned_expr)
             }
             Sum => {
@@ -343,10 +347,10 @@ impl Operator {
                 }
                 Ok(Expression::nil())
             }
-            Include => {
-                if arguments.len() != 1 {
+            Import => {
+                if !(arguments.len() == 1 || arguments.len() == 2) {
                     exp!(
-                        EV::ArgumentMismatch(arguments.len(), "1".to_string()),
+                        EV::ArgumentMismatch(arguments.len(), "1 or 2".to_string()),
                         snapshot
                     );
                 }
@@ -356,13 +360,31 @@ impl Operator {
                         EV::InvalidArgument,
                         snapshot,
                         format!(
-                            "`include` requires the path (:text) as its argument (got `{}` instead)",
+                            "`import` requires the path (:text) as its first argument (got `{}` instead)",
                             val
                         )
                     ),
                 };
 
-                resolve_resource(&path, snapshot, expr, env.clone())
+                let namespace = match arguments.get_mut(1) {
+                    Some(val) => match val.eval(snap(), env.clone())?.into_value() {
+                        Keyword(val) => Some(val.string_value().clone()),
+                        val => exp!(
+                            EV::InvalidArgument,
+                            snapshot,
+                            format!(
+                                "`import` requires the namespace (:keyword) as its second argument (got `{}` instead)",
+                                val
+                            )
+                        ),
+                    },
+                    None => None
+                };
+
+                let imported_env = Arc::new(RwLock::new(Environment::root()));
+                let exp = resolve_resource(&path, snapshot, expr, imported_env.clone())?;
+                env.write().unwrap().add_parent(imported_env, namespace);
+                Ok(exp)
             }
             Eval => {
                 if arguments.len() != 1 {

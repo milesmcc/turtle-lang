@@ -1,18 +1,21 @@
 ;; Close-to-primitive operators
-(label 'set label)
-(label 'setq (macro '(identifier value) '(label identifier ,value)))
+(export 'exportq (macro '(identifier value) '(export identifier ,value)))
+(export 'letq (macro '(identifier value) '(let identifier ,value)))
+
+(export 'set export)
+(export 'setq exportq)
 
 ;; Helpful list operators
-(setq head car)
-(setq tail cdr)
-(setq first (lambda '(x) '(head x)))
-(setq second (lambda '(x) '(head (tail x))))
-(setq third (lambda '(x) '(head (tail (tail x)))))
-(setq fourth (lambda '(x) '(head (tail (tail (tail x))))))
+(export 'head car)
+(export 'tail cdr)
+(export 'first (lambda '(x) '(head x)))
+(export 'second (lambda '(x) '(head (tail x))))
+(export 'third (lambda '(x) '(head (tail (tail x)))))
+(export 'fourth (lambda '(x) '(head (tail (tail (tail x))))))
 
 ;; Macros
-(label 'metafunc (macro 'args '(label (first args) (macro (second args) (first (tail (tail args)))))))
-(metafunc func args (label (first args) (lambda (second args) (first (tail (tail args))))))
+(export 'metafunc (macro 'args '(export (first args) (macro (second args) (first (tail (tail args)))))))
+(metafunc func args (export (first args) (lambda (second args) (first (tail (tail args))))))
 
 ;; Operation shorthand
 (metafunc do something ,(cons lambda (cons () something)))
@@ -21,15 +24,15 @@
 (func assert (expr) (cond (expr expr) ('t (throw :assertion-failed-exp))))
 
 ;; Math constants
-(setq pi 3.14159265358979323846)
-(setq e 2.71828182845904523536)
+(export 'pi 3.14159265358979323846)
+(export 'e 2.71828182845904523536)
 
 ;; Basic math operators  
-(setq + sum)
-(setq * prod)
+(export '+ sum)
+(export '* prod)
 (func - (a b) (+ a (* -1 b)))
 (func / (a b) (* a (exp b -1)))
-(setq % modulo)
+(export '% modulo)
 (metafunc ++ (a) (set a (+ ,a 1)))
 (metafunc -- (a) (set a (+ ,a -1)))
 (metafunc increasing elems ,(cons ge elems))

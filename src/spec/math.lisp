@@ -1,4 +1,4 @@
-(include "@prelude")
+(import "@prelude")
 
 ;; Greater than
 (assert (gt 0 1 2 3 4))

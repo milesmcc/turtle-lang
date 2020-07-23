@@ -1,4 +1,4 @@
-(include "@prelude")
+(import "@prelude")
 
 (assert (eq "smoke" "smoke"))
 (assert (not (eq "smoke" "smoketest")))
