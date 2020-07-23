@@ -4,14 +4,14 @@ use std::fmt;
 use std::sync::{Arc, RwLock};
 
 #[derive(Debug, Clone)]
-pub struct CallSnapshot<'a> {
+pub struct CallSnapshot {
     parent: Option<Arc<RwLock<Self>>>,
-    expression: Expression<'a>,
+    expression: Expression,
     depth: usize,
 }
 
-impl<'a> CallSnapshot<'a> {
-    pub fn root(exp: &Expression<'a>) -> Arc<RwLock<Self>> {
+impl CallSnapshot {
+    pub fn root(exp: &Expression) -> Arc<RwLock<Self>> {
         Arc::new(RwLock::new(CallSnapshot {
             parent: None,
             expression: exp.clone(),
@@ -20,9 +20,9 @@ impl<'a> CallSnapshot<'a> {
     }
 
     pub fn new(
-        exp: &Expression<'a>,
+        exp: &Expression,
         parent: &Arc<RwLock<Self>>,
-    ) -> Result<Arc<RwLock<Self>>, Exception<'a>> {
+    ) -> Result<Arc<RwLock<Self>>, Exception> {
         // TODO: make read lock check return an exception instead of panicking
         let depth = parent
             .read()
@@ -44,12 +44,12 @@ impl<'a> CallSnapshot<'a> {
         })))
     }
 
-    pub fn expression(&self) -> &'_ Expression<'a> {
+    pub fn expression(&self) -> &'_ Expression {
         &self.expression
     }
 }
 
-impl fmt::Display for CallSnapshot<'_> {
+impl fmt::Display for CallSnapshot {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match &self.parent {
             Some(parent_ref) => match parent_ref.read() {

@@ -1,15 +1,16 @@
-use crate::{exp, parse, stdlib, CallSnapshot, Exception, ExceptionValue as EV, Expression};
+use crate::{exp, parse, stdlib, CallSnapshot, Exception, ExceptionValue as EV, Expression, Environment};
 use relative_path::RelativePath;
 use std::env;
 use std::fs;
 use std::path::PathBuf;
 use std::sync::{Arc, RwLock};
 
-pub fn resolve_resource<'a>(
+pub fn resolve_resource(
     path: &str,
-    snapshot: Arc<RwLock<CallSnapshot<'a>>>,
-    via: &Expression<'a>,
-) -> Result<Expression<'a>, Exception<'a>> {
+    snapshot: Arc<RwLock<CallSnapshot>>,
+    via: &Expression,
+    env: Arc<RwLock<Environment>>
+) -> Result<Expression, Exception> {
     let content = match path.starts_with('@') {
         true => match stdlib::get_std_resource(path) {
             Some(val) => val,
@@ -75,11 +76,11 @@ pub fn resolve_resource<'a>(
         }
     };
 
-    let parsed = parse(&content, &path.to_string(), via.clone_env())?;
+    let parsed = parse(&content, &path.to_string())?;
 
     let mut return_val = Expression::nil();
     for mut exp in parsed {
-        return_val = exp.eval(CallSnapshot::new(&exp, &snapshot)?)?;
+        return_val = exp.eval(CallSnapshot::new(&exp, &snapshot)?, env.clone())?;
     }
     Ok(return_val)
 }

@@ -10,11 +10,10 @@ use std::sync::{Arc, RwLock};
 #[grammar = "parser/syntax.pest"]
 pub struct SyntaxParser;
 
-pub fn parse<'a>(
+pub fn parse(
     code: &str,
     location: &str,
-    env: Arc<RwLock<Environment<'a>>>,
-) -> Result<Vec<Expression<'a>>, Exception<'a>> {
+) -> Result<Vec<Expression>, Exception> {
     let source = Arc::new(RwLock::new(Source::new(
         String::from(code),
         String::from(location),
@@ -29,7 +28,7 @@ pub fn parse<'a>(
                     continue;
                 }
                 exps.push(
-                    build_expression(pair.clone(), env.clone(), source.clone())?
+                    build_expression(pair.clone(), source.clone())?
                         .with_source(SourcePosition::from_pair(&pair, &source)),
                 );
             }
@@ -39,11 +38,10 @@ pub fn parse<'a>(
     }
 }
 
-fn build_expression<'a>(
+fn build_expression(
     pair: Pair<'_, Rule>,
-    env: Arc<RwLock<Environment<'a>>>,
     source: Arc<RwLock<Source>>,
-) -> Result<Expression<'a>, Exception<'a>> {
+) -> Result<Expression, Exception> {
     let pos = SourcePosition::new(
         pair.as_span().start_pos().pos(),
         pair.as_span().end_pos().pos(),
@@ -51,29 +49,27 @@ fn build_expression<'a>(
     );
     match &pair.as_rule() {
         Rule::list => {
-            let mut values: Vec<Expression<'a>> = Vec::new();
+            let mut values: Vec<Expression> = Vec::new();
             for elem in pair.into_inner() {
                 values.push(
-                    build_expression(elem.clone(), env.clone(), source.clone())?
+                    build_expression(elem.clone(), source.clone())?
                         .with_source(SourcePosition::from_pair(&elem, &source)),
                 )
             }
-            Ok(Expression::new(Value::List(values), env.clone()))
+            Ok(Expression::new(Value::List(values)))
         }
         Rule::symbol => Ok(Expression::new(
             Value::Symbol(Symbol::new(String::from(pair.as_str()))),
-            env.clone(),
         )
         .with_source(pos)),
         Rule::keyword => Ok(Expression::new(
             Value::Keyword(Keyword::new(String::from(
                 pair.into_inner().next().unwrap().as_str(),
             ))),
-            env.clone(),
         )
         .with_source(pos)),
         Rule::number => match pair.as_str().parse::<f64>() {
-            Ok(num) => Ok(Expression::new(Value::Number(num), env.clone()).with_source(pos)),
+            Ok(num) => Ok(Expression::new(Value::Number(num)).with_source(pos)),
             Err(_) => Err(Exception::new(
                 EV::Syntax,
                 None,
@@ -82,7 +78,6 @@ fn build_expression<'a>(
         },
         Rule::text => Ok(Expression::new(
             Value::Text(pair.into_inner().as_str().to_string()),
-            env.clone(),
         )),
 
         // Sugar
@@ -93,15 +88,14 @@ fn build_expression<'a>(
                     Rule::eval => Operator::Eval,
                     _ => unreachable!(),
                 }),
-                env.clone(),
             )];
             for elem in pair.into_inner() {
                 elements.push(
-                    build_expression(elem.clone(), env.clone(), source.clone())?
+                    build_expression(elem.clone(), source.clone())?
                         .with_source(SourcePosition::from_pair(&elem, &source)),
                 );
             }
-            Ok(Expression::new(Value::List(elements), env))
+            Ok(Expression::new(Value::List(elements)))
         }
         _ => Err(Exception::new(
             EV::Syntax,

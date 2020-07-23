@@ -11,8 +11,8 @@ pub mod keyword;
 pub use keyword::Keyword;
 
 #[derive(Debug, Clone, PartialEq, PartialOrd)]
-pub enum Value<'a> {
-    List(Vec<Expression<'a>>),
+pub enum Value {
+    List(Vec<Expression>),
     Number(f64),
     Text(String),
     Keyword(Keyword),
@@ -24,17 +24,17 @@ pub enum Value<'a> {
 
     Lambda {
         params: Vec<Symbol>,
-        expressions: Vec<Expression<'a>>,
+        expressions: Vec<Expression>,
         collapse_input: bool,
     },
     Macro {
         params: Vec<Symbol>,
-        expressions: Vec<Expression<'a>>,
+        expressions: Vec<Expression>,
         collapse_input: bool,
     },
 }
 
-impl<'a> Value<'a> {
+impl Value {
     pub fn as_type(&self) -> Self {
         use Value::*;
 
@@ -52,7 +52,7 @@ impl<'a> Value<'a> {
     }
 }
 
-impl<'a> fmt::Display for Value<'a> {
+impl<'a> fmt::Display for Value {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         use Value::*;
 

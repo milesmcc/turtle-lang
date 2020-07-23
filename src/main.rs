@@ -25,11 +25,11 @@ pub use parser::parse;
 
 fn main() {
     let env = Arc::new(RwLock::new(Environment::root()));
-    match parse("(include \"@prelude\")", "<builtin>", env.clone()) {
+    match parse("(include \"@prelude\")", "<builtin>") {
         Ok(expressions) => {
             for mut expression in expressions {
                 let snapshot = CallSnapshot::root(&expression);
-                match expression.eval(snapshot) {
+                match expression.eval(snapshot, env.clone()) {
                     Ok(_) => {}
                     Err(err) => eprintln!("{}", err),
                 }

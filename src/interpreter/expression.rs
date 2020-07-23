@@ -7,24 +7,22 @@ use crate::{
 };
 
 #[derive(Debug, Clone)]
-pub struct Expression<'a> {
-    value: Value<'a>,
-    env: Arc<RwLock<Environment<'a>>>,
+pub struct Expression {
+    value: Value,
     source: Option<SourcePosition>,
 }
 
-impl<'a> PartialEq for Expression<'a> {
+impl PartialEq for Expression {
     fn eq(&self, other: &Self) -> bool {
         // TODO: do we need to check whether the environments are the same?
         self.value == other.value
     }
 }
 
-impl<'a> Expression<'a> {
-    pub fn new(value: Value<'a>, env: Arc<RwLock<Environment<'a>>>) -> Self {
+impl Expression {
+    pub fn new(value: Value) -> Self {
         Self {
             value,
-            env,
             source: None,
         }
     }
@@ -37,28 +35,22 @@ impl<'a> Expression<'a> {
     pub fn nil() -> Self {
         Self {
             value: Value::List(vec![]),
-            env: Arc::new(RwLock::new(Environment::root())),
             source: None,
         }
-    }
-
-    pub fn clone_env(&self) -> Arc<RwLock<Environment<'a>>> {
-        self.env.clone()
     }
 
     pub fn t() -> Self {
         Self {
             value: Value::True,
-            env: Arc::new(RwLock::new(Environment::root())),
             source: None,
         }
     }
 
-    pub fn get_value(&'a self) -> &Value {
+    pub fn get_value(&self) -> &Value {
         &self.value
     }
 
-    pub fn into_value(self) -> Value<'a> {
+    pub fn into_value(self) -> Value {
         self.value
     }
 
@@ -68,8 +60,9 @@ impl<'a> Expression<'a> {
 
     pub fn eval(
         &mut self,
-        parent_snapshot: Arc<RwLock<CallSnapshot<'a>>>,
-    ) -> Result<Self, Exception<'a>> {
+        parent_snapshot: Arc<RwLock<CallSnapshot>>,
+        env: Arc<RwLock<Environment>>
+    ) -> Result<Self, Exception> {
         use Value::*;
 
         let snapshot = CallSnapshot::new(&self, &parent_snapshot)?;
@@ -80,16 +73,16 @@ impl<'a> Expression<'a> {
             List(vals) => {
                 if !vals.is_empty() {
                     let mut operator = vals.get(0).unwrap().clone();
-                    let arguments: Vec<Expression<'a>> = vals.iter().skip(1).cloned().collect();
+                    let arguments: Vec<Expression> = vals.iter().skip(1).cloned().collect();
                     match &operator.value {
-                        Operator(operand) => operand.apply(snapshot, arguments, self),
+                        Operator(operand) => operand.apply(snapshot, arguments, self, env),
                         List(_) | Symbol(_) => {
-                            let evaled_operator = operator.eval(snap())?;
+                            let evaled_operator = operator.eval(snap(), env.clone())?;
                             let mut new_list = vec![evaled_operator];
                             for arg in arguments {
                                 new_list.push(arg);
                             }
-                            Expression::new(Value::List(new_list), self.env.clone()).eval(snap())
+                            Expression::new(Value::List(new_list)).eval(snap(), env)
                         }
                         Lambda {
                             params,
@@ -101,13 +94,16 @@ impl<'a> Expression<'a> {
                             expressions,
                             collapse_input,
                         } => {
+                            let mut scoped_env = Environment::with_parent(env.clone());
+                            let mut scoped_env_lock = scoped_env.write().unwrap();
+
                             if *collapse_input {
                                 let sym = params.get(0).unwrap(); // this unwrap will always be ok; it is enforced by the parser
                                 let args_evaled = {
                                     let mut list = Vec::new();
                                     for arg_expr in arguments {
                                         list.push(match &operator.value {
-                                            Lambda { .. } => arg_expr.clone().eval(snap())?,
+                                            Lambda { .. } => arg_expr.clone().eval(snap(), env.clone())?,
                                             Macro { .. } => arg_expr.clone(),
                                             _ => unreachable!(),
                                         });
@@ -115,9 +111,9 @@ impl<'a> Expression<'a> {
                                     list
                                 };
                                 let arg =
-                                    Expression::new(Value::List(args_evaled), self.env.clone());
+                                    Expression::new(Value::List(args_evaled));
                                 for mut exp in expressions.clone() {
-                                    exp.get_env_mut().assign(sym.clone(), arg.clone(), true);
+                                    scoped_env_lock.assign(sym.clone(), arg.clone(), true);
                                 }
                             } else {
                                 exp_assert!(
@@ -130,12 +126,12 @@ impl<'a> Expression<'a> {
                                 );
                                 for (symbol, arg_expr) in params.iter().zip(arguments.iter()) {
                                     let arg_evaled = match &operator.value {
-                                        Lambda { .. } => arg_expr.clone().eval(snap())?,
+                                        Lambda { .. } => arg_expr.clone().eval(snap(), env.clone())?,
                                         Macro { .. } => arg_expr.clone(),
                                         _ => unreachable!(),
                                     };
                                     for mut exp in expressions.clone() {
-                                        exp.get_env_mut().assign(
+                                        scoped_env_lock.assign(
                                             symbol.clone(),
                                             arg_evaled.clone(),
                                             true,
@@ -145,7 +141,7 @@ impl<'a> Expression<'a> {
                             }
                             let mut result = Expression::nil();
                             for mut exp in expressions.clone() {
-                                result = exp.eval(snap())?;
+                                result = exp.eval(snap(), scoped_env.clone())?;
                             }
                             Ok(result)
                         }
@@ -155,34 +151,22 @@ impl<'a> Expression<'a> {
                     Ok(self.clone())
                 }
             }
-            Symbol(sym) => match self.get_env().lookup(&sym) {
+            Symbol(sym) => match env.read().expect("unable to access environment (are threads locked?)").lookup(&sym) {
                 Some(exp) => Ok(exp),
                 None => exp!(EV::UndefinedSymbol(sym.clone()), snapshot),
             },
             _ => Ok(self.clone()),
         }
     }
-
-    pub fn get_env(&self) -> RwLockReadGuard<Environment<'a>> {
-        self.env
-            .read()
-            .expect("unable to access environment (are threads locked?)")
-    }
-
-    pub fn get_env_mut(&mut self) -> RwLockWriteGuard<Environment<'a>> {
-        self.env
-            .write()
-            .expect("unable to mutably access environment (are threads locked?)")
-    }
 }
 
-impl<'a> fmt::Display for Expression<'a> {
+impl fmt::Display for Expression {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}", self.value)
     }
 }
 
-impl<'a> PartialOrd for Expression<'a> {
+impl PartialOrd for Expression {
     fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
         self.value.partial_cmp(&other.value)
     }

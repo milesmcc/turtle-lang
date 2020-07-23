@@ -1,17 +1,17 @@
 use crate::{Expression, Exception, parse, Environment, CallSnapshot};
 use std::sync::{Arc, RwLock};
 
-fn exec<'a>(code: &str) -> Result<Expression<'a>, Exception<'a>> {
+fn exec(code: &str) -> Result<Expression, Exception> {
     let root = Arc::new(RwLock::new(Environment::root()));
-    let expressions = parse(code, "<test module>", root)?;
+    let expressions = parse(code, "<test module>")?;
     let mut ret = Expression::nil();
     for mut expression in expressions {
-        ret = expression.eval(CallSnapshot::root(&expression))?
+        ret = expression.eval(CallSnapshot::root(&expression), root.clone())?
     }
     Ok(ret)
 }
 
-pub fn check<'a>(code: &str) -> Result<Expression<'a>, Exception<'a>> {
+pub fn check(code: &str) -> Result<Expression, Exception> {
     match exec(code) {
         Ok(value) => {
             println!("{}", value);

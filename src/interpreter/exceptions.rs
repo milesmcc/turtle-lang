@@ -37,18 +37,18 @@ macro_rules! exp_assert {
 }
 
 #[derive(Debug, Clone)]
-pub enum ExceptionValue<'a> {
-    Other(Expression<'a>),
+pub enum ExceptionValue {
+    Other(Expression),
     UndefinedSymbol(Symbol),
     ArgumentMismatch(usize, String),
     InvalidArgument,
     Syntax,
     InvalidIncludePath(String),
-    InvalidOperator(Value<'a>),
+    InvalidOperator(Value),
     StackOverflow
 }
 
-impl<'a> ExceptionValue<'a> {
+impl ExceptionValue {
     pub fn explain(&self) -> String {
         use ExceptionValue::*;
 
@@ -73,42 +73,42 @@ impl<'a> ExceptionValue<'a> {
         }
     }
 
-    pub fn into_expression(self) -> Expression<'a> {
+    pub fn into_expression(self) -> Expression {
         use ExceptionValue::*;
 
         let root_env = Arc::new(RwLock::new(Environment::root()));
 
         match self {
             Other(expression) => expression,
-            UndefinedSymbol(_) => Expression::new(Value::Keyword(Keyword::from_str("undefined-symbol-exp")), root_env),
-            ArgumentMismatch(_, _) => Expression::new(Value::Keyword(Keyword::from_str("argument-mismatch-exp")), root_env),
-            Syntax => Expression::new(Value::Keyword(Keyword::from_str("syntax-exp")), root_env),
-            InvalidArgument => Expression::new(Value::Keyword(Keyword::from_str("invalid-argument-exp")), root_env),
-            InvalidIncludePath(_) => Expression::new(Value::Keyword(Keyword::from_str("invalid-include-path-exp")), root_env),
-            InvalidOperator(_) => Expression::new(Value::Keyword(Keyword::from_str("invalid-operator-exp")), root_env),
-            StackOverflow => Expression::new(Value::Keyword(Keyword::from_str("stack-overflow-exp")), root_env),
+            UndefinedSymbol(_) => Expression::new(Value::Keyword(Keyword::from_str("undefined-symbol-exp"))),
+            ArgumentMismatch(_, _) => Expression::new(Value::Keyword(Keyword::from_str("argument-mismatch-exp"))),
+            Syntax => Expression::new(Value::Keyword(Keyword::from_str("syntax-exp"))),
+            InvalidArgument => Expression::new(Value::Keyword(Keyword::from_str("invalid-argument-exp"))),
+            InvalidIncludePath(_) => Expression::new(Value::Keyword(Keyword::from_str("invalid-include-path-exp"))),
+            InvalidOperator(_) => Expression::new(Value::Keyword(Keyword::from_str("invalid-operator-exp"))),
+            StackOverflow => Expression::new(Value::Keyword(Keyword::from_str("stack-overflow-exp"))),
         }
     }
 }
 
-impl fmt::Display for ExceptionValue<'_> {
+impl fmt::Display for ExceptionValue {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{} ({})", self.explain(), self.clone().into_expression())
     }
 }
 
 #[derive(Debug, Clone)]
-pub struct Exception<'a> {
-    value: ExceptionValue<'a>,
-    snapshot: Option<Arc<RwLock<CallSnapshot<'a>>>>,
+pub struct Exception {
+    value: ExceptionValue,
+    snapshot: Option<Arc<RwLock<CallSnapshot>>>,
     additional_sources: Vec<SourcePosition>,
     note: Option<String>,
 }
 
-impl<'a> Exception<'a> {
+impl Exception {
     pub fn new(
-        value: ExceptionValue<'a>,
-        snapshot: Option<Arc<RwLock<CallSnapshot<'a>>>>,
+        value: ExceptionValue,
+        snapshot: Option<Arc<RwLock<CallSnapshot>>>,
         note: Option<String>,
     ) -> Self {
         Exception {
@@ -119,12 +119,12 @@ impl<'a> Exception<'a> {
         }
     }
 
-    pub fn into_value(self) -> ExceptionValue<'a> {
+    pub fn into_value(self) -> ExceptionValue {
         self.value
     }
 }
 
-impl From<pest::error::Error<parser::Rule>> for Exception<'_> {
+impl From<pest::error::Error<parser::Rule>> for Exception {
     fn from(err: pest::error::Error<parser::Rule>) -> Self {
         use pest::error::InputLocation::*;
 
@@ -143,7 +143,7 @@ impl From<pest::error::Error<parser::Rule>> for Exception<'_> {
     }
 }
 
-impl fmt::Display for Exception<'_> {
+impl fmt::Display for Exception {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         writeln!(
             f,
@@ -194,4 +194,4 @@ impl fmt::Display for Exception<'_> {
     }
 }
 
-impl Error for Exception<'_> {}
+impl Error for Exception {}
