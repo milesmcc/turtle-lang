@@ -15,10 +15,14 @@
 (metafunc func args (label (first args) (lambda (second args) (first (tail (tail args))))))
 
 ;; Operation shorthand
-(metafunc do something (cons lambda (cons () something)))
+(metafunc do something ,(cons lambda (cons () something)))
 
 ;; Assertion and testing
 (func assert (expr) (cond (expr expr) ('t (throw :assertion-failed-exp))))
+
+;; Math constants
+(setq pi 3.14159265358979323846)
+(setq e 2.71828182845904523536)
 
 ;; Basic math operators  
 (setq + sum)
@@ -28,9 +32,17 @@
 (setq % modulo)
 (metafunc ++ (a) (set a (+ ,a 1)))
 (metafunc -- (a) (set a (+ ,a -1)))
+(metafunc increasing elems ,(cons ge elems))
+(metafunc strictly-increasing elems ,(cons gt elems))
+;; implement increasing and strictly increasing using the reverse operator
+
+;; Trigonometry
+;; TODO
 
 ;; Boolean operators
 (func not (val) (cond (val ()) ('t 't)))
+(func and vals (cond ((not vals) 't) ((head vals) (and (tail vals))) ('t ())))
+(func or vals (cond ((not vals) ()) ((head vals) 't) ('t (or (tail vals)))))
 
 ;; Fun
 (setq zen "The Zen of Turtle (to be written...)")
