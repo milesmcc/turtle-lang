@@ -95,7 +95,6 @@ impl Expression {
                             collapse_input,
                         } => {
                             let scoped_env = Environment::with_parent(env.clone());
-                            let mut scoped_env_lock = scoped_env.write().unwrap();
 
                             if *collapse_input {
                                 let sym = params.get(0).unwrap(); // this unwrap will always be ok; it is enforced by the parser
@@ -113,7 +112,7 @@ impl Expression {
                                 let arg =
                                     Expression::new(Value::List(args_evaled));
                                 for _exp in expressions.clone() {
-                                    scoped_env_lock.assign(sym.clone(), arg.clone(), true);
+                                    scoped_env.write().unwrap().assign(sym.clone(), arg.clone(), true);
                                 }
                             } else {
                                 exp_assert!(
@@ -131,7 +130,7 @@ impl Expression {
                                         _ => unreachable!(),
                                     };
                                     for _exp in expressions.clone() {
-                                        scoped_env_lock.assign(
+                                        scoped_env.write().unwrap().assign(
                                             symbol.clone(),
                                             arg_evaled.clone(),
                                             true,
