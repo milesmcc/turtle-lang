@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 
 use std::sync::{Arc, RwLock};
+use std::fmt;
 
 use crate::{Expression, Operator, Symbol, Value};
 
@@ -93,21 +94,21 @@ impl<'a> Environment<'a> {
     }
 }
 
-// impl<'a> fmt::Display for Environment<'a> {
-//     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-//         write!(
-//             f,
-//             "[values: {}]\n{}\n--- showing parent ---\n{}",
-//             self.values.len(),
-//             self.values
-//                 .iter()
-//                 .map(|(k, v)| format!("{} := {}", k, v))
-//                 .collect::<Vec<String>>()
-//                 .join("\n"),
-//             match &self.parent {
-//                 Some(parent) => format!("{}", parent.read().expect("cannot get parent")),
-//                 None => String::from("env has no parent"),
-//             }
-//         )
-//     }
-// }
+impl<'a> fmt::Display for Environment<'a> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(
+            f,
+            "[values: {}]\n{}\n--- showing parent ---\n{}",
+            self.values.len(),
+            self.values
+                .iter()
+                .map(|(k, v)| format!("{} := {}", k, v))
+                .collect::<Vec<String>>()
+                .join("\n"),
+            match &self.parent {
+                Some(parent) => format!("{}", parent.read().expect("cannot get parent")),
+                None => String::from("env has no parent"),
+            }
+        )
+    }
+}
