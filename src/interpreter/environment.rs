@@ -34,7 +34,7 @@ impl Environment {
 
         match symbol.string_value().as_str() {
             "nil" => Some(Value::List(vec![])),
-            "t" => Some(Value::True),
+            "t" | "true" => Some(Value::True),
             "quote" => Some(Value::Operator(Quote)),
             "atom" => Some(Value::Operator(Atom)),
             "eq" => Some(Value::Operator(Eq)),
