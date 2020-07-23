@@ -1,5 +1,5 @@
 use std::fmt;
-use std::sync::{Arc, RwLock, RwLockReadGuard, RwLockWriteGuard};
+use std::sync::{Arc, RwLock};
 
 use crate::{
     exp, exp_assert, CallSnapshot, Environment, Exception, ExceptionValue as EV, SourcePosition,
@@ -94,7 +94,7 @@ impl Expression {
                             expressions,
                             collapse_input,
                         } => {
-                            let mut scoped_env = Environment::with_parent(env.clone());
+                            let scoped_env = Environment::with_parent(env.clone());
                             let mut scoped_env_lock = scoped_env.write().unwrap();
 
                             if *collapse_input {
@@ -112,7 +112,7 @@ impl Expression {
                                 };
                                 let arg =
                                     Expression::new(Value::List(args_evaled));
-                                for mut exp in expressions.clone() {
+                                for _exp in expressions.clone() {
                                     scoped_env_lock.assign(sym.clone(), arg.clone(), true);
                                 }
                             } else {
@@ -130,7 +130,7 @@ impl Expression {
                                         Macro { .. } => arg_expr.clone(),
                                         _ => unreachable!(),
                                     };
-                                    for mut exp in expressions.clone() {
+                                    for _exp in expressions.clone() {
                                         scoped_env_lock.assign(
                                             symbol.clone(),
                                             arg_evaled.clone(),

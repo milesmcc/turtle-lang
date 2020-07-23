@@ -1,5 +1,5 @@
 use crate::{
-    Environment, Exception, ExceptionValue as EV, Expression, Keyword, Operator, Source,
+    Exception, ExceptionValue as EV, Expression, Keyword, Operator, Source,
     SourcePosition, Symbol, Value,
 };
 use pest::iterators::Pair;

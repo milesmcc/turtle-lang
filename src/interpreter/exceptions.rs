@@ -76,7 +76,7 @@ impl ExceptionValue {
     pub fn into_expression(self) -> Expression {
         use ExceptionValue::*;
 
-        let root_env = Arc::new(RwLock::new(Environment::root()));
+        let _root_env = Arc::new(RwLock::new(Environment::root()));
 
         match self {
             Other(expression) => expression,
