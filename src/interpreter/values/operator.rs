@@ -219,7 +219,7 @@ impl Operator {
                 };
 
                 let assigned_expr = arguments.get_mut(1).unwrap().eval(snap(), env.clone())?;
-                env.write().unwrap().assign(symbol, assigned_expr.clone(), false);
+                env.write().unwrap().assign(symbol, assigned_expr.clone(), false, snap())?;
                 Ok(assigned_expr)
             }
             Sum => {
@@ -401,9 +401,9 @@ impl Operator {
                         let mut symbols = Vec::new();
                         for val in vals {
                             match val.into_value() {
-                            Value::Symbol(sym) => symbols.push(sym),
-                            other => exp!(EV::InvalidArgument, snapshot, format!("each item in the first argument (a list) must be a symbol (got `{}`)", other)),
-                        }
+                                Value::Symbol(sym) => symbols.push(sym),
+                                other => exp!(EV::InvalidArgument, snapshot, format!("each item in the first argument (a list) must be a symbol (got `{}`)", other)),
+                            }
                         }
                         symbols
                     }
@@ -461,7 +461,7 @@ impl Operator {
                     Err(err) => {
                         // TODO: remove extra clone
                         match catch_func.clone().into_value() {
-                            Value::Lambda{..} => Expression::new(Value::List(vec![catch_func.clone(), err.into_value().into_expression()])).eval(snapshot, Environment::with_parent(env)),
+                            Value::Lambda{..} => Expression::new(Value::List(vec![catch_func.clone(), err.into_value().into_expression()])).eval(snapshot, Arc::new(RwLock::new(Environment::root().with_parent(env, None)))),
                             _ => exp!(
                                 EV::InvalidArgument,
                                 snapshot,

@@ -3,13 +3,22 @@ use std::collections::HashMap;
 use std::fmt;
 use std::sync::{Arc, RwLock};
 
-use crate::{Expression, Operator, Symbol, Value};
+use crate::{
+    exp, CallSnapshot, Exception, ExceptionValue as EV, Expression, Keyword, Operator, Symbol,
+    Value,
+};
+
+#[derive(Debug)]
+struct ParentEnvironment {
+    namespace: Option<String>,
+    environment: Arc<RwLock<Environment>>,
+}
 
 #[derive(Debug)]
 pub struct Environment {
-    values: HashMap<Symbol, Expression>,
+    values: HashMap<Symbol, Arc<RwLock<Expression>>>,
     // This unreadable memory model might cause issues going forward
-    parent: Option<Arc<RwLock<Environment>>>,
+    parents: Vec<ParentEnvironment>,
 }
 
 impl Environment {
@@ -18,15 +27,16 @@ impl Environment {
     pub fn root() -> Self {
         Self {
             values: HashMap::new(),
-            parent: None,
+            parents: vec![],
         }
     }
 
-    pub fn with_parent(parent: Arc<RwLock<Self>>) -> Arc<RwLock<Self>> {
-        Arc::new(RwLock::new(Self {
-            values: HashMap::new(),
-            parent: Some(parent),
-        }))
+    pub fn with_parent(mut self, parent: Arc<RwLock<Self>>, namespace: Option<String>) -> Self {
+        self.parents.push(ParentEnvironment {
+            namespace,
+            environment: parent,
+        });
+        self
     }
 
     fn get_literal(symbol: &Symbol) -> Option<Value> {
@@ -63,33 +73,102 @@ impl Environment {
         }
     }
 
-    pub fn lookup(&self, symbol: &Symbol) -> Option<Expression> {
-        match self.values.get(symbol) {
-            Some(val) => Some(val.clone()),
-            None => match &self.parent {
-                Some(parent) => parent
-                    .read()
-                    .expect("cannot access environment parent")
-                    .lookup(symbol),
-                None => match Self::get_literal(symbol) {
-                    Some(val) => Some(Expression::new(val)),
-                    _ => None,
-                },
-            },
+    fn resolve_symbol(
+        &self,
+        symbol: &Symbol,
+        namespace: Option<String>,
+    ) -> Option<(Arc<RwLock<Expression>>, usize)> {
+        if namespace == None {
+            if let Some(value) = self.values.get(&symbol) {
+                return Some((value.clone(), 0));
+            }
+        } else {
+            for parent in &self.parents {
+                if namespace == parent.namespace {
+                    return parent.environment.read().unwrap().resolve_symbol(symbol, namespace);
+                }
+            }
+        }
+        let mut best_match: (Option<Arc<RwLock<Expression>>>, usize) = (None, 0);
+        for parent in &self.parents {
+            if parent.namespace.is_some() {
+                continue;
+            }
+            if let Some((exp, depth)) = parent.environment.read().unwrap().resolve_symbol(symbol, None) {
+                if best_match.0.is_none() || depth < best_match.1 {
+                    best_match = (Some(exp), depth);
+                }
+            }
+        }
+        if let Some(exp) = best_match.0 {
+            return Some((exp, best_match.1 + 1));
+        }
+        match Self::get_literal(symbol) {
+            Some(value) => Some((Arc::new(RwLock::new(Expression::new(value))), 0)),
+            None => None,
         }
     }
 
-    pub fn assign(&mut self, symbol: Symbol, exp: Expression, only_local: bool) {
-        if only_local || (self.values.contains_key(&symbol) && self.lookup(&symbol) == None) {
-            self.values.insert(symbol, exp);
+    fn extract_components(symbol: &Symbol) -> (Option<String>, Symbol) {
+        let components: Vec<&str> = symbol.string_value().split("::").collect();
+
+        match components.len() {
+            1 => (None, Symbol::from_str(components.get(0).unwrap())),
+            _ => (
+                Some(components.get(0).unwrap().to_string()),
+                Symbol::from_str(
+                    &components
+                        .iter()
+                        .skip(1)
+                        .map(|x| x.to_string())
+                        .collect::<Vec<String>>()
+                        .join("::"),
+                ),
+            ),
+        }
+    }
+
+    pub fn lookup(&self, symbol: &Symbol) -> Option<Arc<RwLock<Expression>>> {
+        let (namespace, identifier) = Self::extract_components(symbol);
+        println!("searching for {:?}::{}", namespace, identifier);
+        match self.resolve_symbol(&identifier, namespace) {
+            Some((exp, _)) => Some(exp),
+            None => None,
+        }
+    }
+
+    pub fn assign(
+        &mut self,
+        symbol: Symbol,
+        exp: Expression,
+        only_local: bool,
+        snapshot: Arc<RwLock<CallSnapshot>>,
+    ) -> Result<Arc<RwLock<Expression>>, Exception> {
+        let (namespace, identifier) = Self::extract_components(&symbol);
+
+        if only_local && namespace.is_some() {
+            exp!(
+                EV::Assignment(symbol, exp),
+                snapshot,
+                "cannot perform local assignment with namespace".to_string()
+            )
+        }
+
+        if only_local || self.values.contains_key(&identifier) || self.parents.is_empty() {
+            let lock = Arc::new(RwLock::new(exp));
+            self.values.insert(identifier, lock.clone());
+            Ok(lock)
         } else {
-            match &self.parent {
-                Some(parent_lock) => match parent_lock.write() {
-                    Ok(mut parent) => parent.assign(symbol, exp, only_local),
-                    Err(_) => {} // TODO: do we want to fail loud?
-                },
-                None => self.assign(symbol, exp, true),
+            for parent in &self.parents {
+                if parent.namespace == namespace {
+                    return parent
+                        .environment
+                        .write()
+                        .unwrap()
+                        .assign(identifier, exp, only_local, snapshot);
+                }
             }
+            exp!(EV::Assignment(symbol, exp), snapshot, "could not find suitable environment for assignment".to_string())
         }
     }
 }
@@ -98,17 +177,21 @@ impl fmt::Display for Environment {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
-            "[values: {}]\n{}\n--- showing parent ---\n{}",
+            "[values: {}]\n{}\nimported namespaces: {}",
             self.values.len(),
             self.values
                 .iter()
-                .map(|(k, v)| format!("{} := {}", k, v))
+                .map(|(k, v)| format!("{} := {}", k, v.read().unwrap()))
                 .collect::<Vec<String>>()
                 .join("\n"),
-            match &self.parent {
-                Some(parent) => format!("{}", parent.read().expect("cannot get parent")),
-                None => String::from("env has no parent"),
-            }
+            self.parents
+                .iter()
+                .map(|p| match &p.namespace {
+                    Some(val) => val.clone(),
+                    None => "(directly injected)".to_string(),
+                })
+                .collect::<Vec<String>>()
+                .join(", ")
         )
     }
 }

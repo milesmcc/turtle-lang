@@ -94,7 +94,8 @@ impl Expression {
                             expressions,
                             collapse_input,
                         } => {
-                            let scoped_env = Environment::with_parent(env.clone());
+                            let scoped_env = Environment::root().with_parent(env.clone(), None);
+                            let scoped_env_lock = Arc::new(RwLock::new(scoped_env));
 
                             if *collapse_input {
                                 let sym = params.get(0).unwrap(); // this unwrap will always be ok; it is enforced by the parser
@@ -112,7 +113,7 @@ impl Expression {
                                 let arg =
                                     Expression::new(Value::List(args_evaled));
                                 for _exp in expressions.clone() {
-                                    scoped_env.write().unwrap().assign(sym.clone(), arg.clone(), true);
+                                    scoped_env_lock.write().unwrap().assign(sym.clone(), arg.clone(), true, snap())?;
                                 }
                             } else {
                                 exp_assert!(
@@ -130,17 +131,18 @@ impl Expression {
                                         _ => unreachable!(),
                                     };
                                     for _exp in expressions.clone() {
-                                        scoped_env.write().unwrap().assign(
+                                        scoped_env_lock.write().unwrap().assign(
                                             symbol.clone(),
                                             arg_evaled.clone(),
                                             true,
-                                        );
+                                            snap()
+                                        )?;
                                     }
                                 }
                             }
                             let mut result = Expression::nil();
                             for mut exp in expressions.clone() {
-                                result = exp.eval(snap(), scoped_env.clone())?;
+                                result = exp.eval(snap(), scoped_env_lock.clone())?;
                             }
                             Ok(result)
                         }
@@ -151,7 +153,7 @@ impl Expression {
                 }
             }
             Symbol(sym) => match env.read().expect("unable to access environment (are threads locked?)").lookup(&sym) {
-                Some(exp) => Ok(exp),
+                Some(exp) => Ok(exp.read().unwrap().clone()), // TODO: make this not need a clone (allow returning pointers)
                 None => exp!(EV::UndefinedSymbol(sym.clone()), snapshot),
             },
             _ => Ok(self.clone()),

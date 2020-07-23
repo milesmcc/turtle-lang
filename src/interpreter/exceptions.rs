@@ -45,7 +45,8 @@ pub enum ExceptionValue {
     Syntax,
     InvalidIncludePath(String),
     InvalidOperator(Value),
-    StackOverflow
+    StackOverflow,
+    Assignment(Symbol, Expression)
 }
 
 impl ExceptionValue {
@@ -69,7 +70,8 @@ impl ExceptionValue {
                 "`{}` is not a valid list operator (did you mean to quote this list?)",
                 value
             ),
-            StackOverflow => "the call stack exceeded the limit (500)".to_string()
+            StackOverflow => "the call stack exceeded the limit (500)".to_string(),
+            Assignment(sym, exp) => format!("could not assign `{}` to `{}`", sym, exp),
         }
     }
 
@@ -87,6 +89,7 @@ impl ExceptionValue {
             InvalidIncludePath(_) => Expression::new(Value::Keyword(Keyword::from_str("invalid-include-path-exp"))),
             InvalidOperator(_) => Expression::new(Value::Keyword(Keyword::from_str("invalid-operator-exp"))),
             StackOverflow => Expression::new(Value::Keyword(Keyword::from_str("stack-overflow-exp"))),
+            Assignment(_, _) => Expression::new(Value::Keyword(Keyword::from_str("assignment-exp"))),
         }
     }
 }
