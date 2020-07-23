@@ -32,4 +32,9 @@ mod tests {
     fn smoke_test() {
         assert!(check(include_str!("smoke_test.lisp")).is_ok());
     }
+
+    #[test]
+    fn math() {
+        assert!(check(include_str!("math.lisp")).is_ok());
+    }
 }
