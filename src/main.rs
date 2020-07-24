@@ -20,7 +20,7 @@ pub use interpreter::exceptions::{Exception, ExceptionValue};
 pub use interpreter::expression::Expression;
 pub use interpreter::resolver::resolve_resource;
 pub use interpreter::source::{Source, SourcePosition};
-pub use interpreter::values::{Keyword, Operator, Symbol, Value};
+pub use interpreter::values::{Keyword, Operator, Symbol, Value, Function};
 pub use parser::parse;
 
 fn main() {

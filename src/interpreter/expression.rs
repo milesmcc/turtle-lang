@@ -84,23 +84,13 @@ impl Expression {
                             }
                             Expression::new(Value::List(new_list)).eval(snap(), env)
                         }
-                        Lambda {
-                            params,
-                            expressions,
-                            collapse_input,
-                            lexical_scope,
-                        }
-                        | Macro {
-                            params,
-                            expressions,
-                            collapse_input,
-                            lexical_scope,
-                        } => {
-                            let scoped_env = Environment::root().with_parent(lexical_scope.clone(), None);
+                        Lambda(function)
+                        | Macro(function) => {
+                            let scoped_env = Environment::root().with_parent(function.lexical_scope.clone(), None);
                             let scoped_env_lock = Arc::new(RwLock::new(scoped_env));
 
-                            if *collapse_input {
-                                let sym = params.get(0).unwrap(); // this unwrap will always be ok; it is enforced by the parser
+                            if function.collapse_input {
+                                let sym = function.params.get(0).unwrap(); // this unwrap will always be ok; it is enforced by the parser
                                 let args_evaled = {
                                     let mut list = Vec::new();
                                     for arg_expr in arguments {
@@ -114,25 +104,25 @@ impl Expression {
                                 };
                                 let arg =
                                     Expression::new(Value::List(args_evaled));
-                                for _exp in expressions.clone() {
+                                for _exp in function.expressions.clone() {
                                     scoped_env_lock.write().unwrap().assign(sym.clone(), arg.clone(), true, snap())?;
                                 }
                             } else {
                                 exp_assert!(
-                                    params.len() == arguments.len(),
+                                    function.params.len() == arguments.len(),
                                     EV::ArgumentMismatch(
                                         arguments.len(),
-                                        format!("{}", params.len())
+                                        format!("{}", function.params.len())
                                     ),
                                     snap()
                                 );
-                                for (symbol, arg_expr) in params.iter().zip(arguments.iter()) {
+                                for (symbol, arg_expr) in function.params.iter().zip(arguments.iter()) {
                                     let arg_evaled = match &operator.value {
                                         Lambda { .. } => arg_expr.clone().eval(snap(), env.clone())?,
                                         Macro { .. } => arg_expr.clone(),
                                         _ => unreachable!(),
                                     };
-                                    for _exp in expressions.clone() {
+                                    for _exp in function.expressions.clone() {
                                         scoped_env_lock.write().unwrap().assign(
                                             symbol.clone(),
                                             arg_evaled.clone(),
@@ -143,7 +133,7 @@ impl Expression {
                                 }
                             }
                             let mut result = Expression::nil();
-                            for mut exp in expressions.clone() {
+                            for mut exp in function.expressions.clone() {
                                 result = exp.eval(snap(), scoped_env_lock.clone())?;
                             }
                             Ok(result)

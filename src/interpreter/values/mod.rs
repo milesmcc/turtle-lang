@@ -11,6 +11,9 @@ pub use symbol::Symbol;
 pub mod keyword;
 pub use keyword::Keyword;
 
+pub mod function;
+pub use function::Function;
+
 #[derive(Debug, Clone)]
 pub enum Value {
     List(Vec<Expression>),
@@ -23,18 +26,8 @@ pub enum Value {
     // Primitive (axiomatic) operators
     Operator(Operator),
 
-    Lambda {
-        params: Vec<Symbol>,
-        expressions: Vec<Expression>,
-        collapse_input: bool,
-        lexical_scope: Arc<RwLock<Environment>>,
-    },
-    Macro {
-        params: Vec<Symbol>,
-        expressions: Vec<Expression>,
-        collapse_input: bool,
-        lexical_scope: Arc<RwLock<Environment>>,
-    },
+    Lambda(Function),
+    Macro(Function),
 }
 
 impl PartialEq for Value {
@@ -88,7 +81,7 @@ impl<'a> fmt::Display for Value {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         use Value::*;
 
-        match self {
+        match &self {
             List(vals) => match vals.len() {
                 0 => write!(f, "nil"),
                 _ => write!(
@@ -105,55 +98,30 @@ impl<'a> fmt::Display for Value {
             Symbol(val) => write!(f, "{}", val),
             Keyword(val) => write!(f, "{}", val),
             True => write!(f, "true"),
-            Lambda {
-                params,
-                expressions,
-                collapse_input,
-                lexical_scope,
-            } => write!(
+            Lambda(function) | Macro(function) => write!(
                 f,
-                "<lambda {}{}{} -> {}>",
-                match collapse_input {
+                "<{} {}{}{} -> {}>",
+                match self {
+                    Lambda(_) => "lambda",
+                    Macro(_) => "macro",
+                    _ => unreachable!(),
+                },
+                match function.collapse_input {
                     true => "",
                     false => "(",
                 },
-                params
+                function
+                    .params
                     .iter()
                     .map(|x| format!("{}", x))
                     .collect::<Vec<String>>()
                     .join(" "),
-                match collapse_input {
+                match function.collapse_input {
                     true => "",
                     false => ")",
                 },
-                expressions
-                    .iter()
-                    .map(|x| format!("{}", x))
-                    .collect::<Vec<String>>()
-                    .join(" ")
-            ),
-            Macro {
-                params,
-                expressions,
-                collapse_input,
-                lexical_scope,
-            } => write!(
-                f,
-                "<macro {}{}{} -> {}>",
-                match collapse_input {
-                    true => "",
-                    false => "(",
-                },
-                params
-                    .iter()
-                    .map(|x| format!("{}", x))
-                    .collect::<Vec<String>>()
-                    .join(" "),
-                match collapse_input {
-                    true => "",
-                    false => ")",
-                },
-                expressions
+                function
+                    .expressions
                     .iter()
                     .map(|x| format!("{}", x))
                     .collect::<Vec<String>>()
