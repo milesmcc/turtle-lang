@@ -88,13 +88,15 @@ impl Expression {
                             params,
                             expressions,
                             collapse_input,
+                            lexical_scope,
                         }
                         | Macro {
                             params,
                             expressions,
                             collapse_input,
+                            lexical_scope,
                         } => {
-                            let scoped_env = Environment::root().with_parent(env.clone(), None);
+                            let scoped_env = Environment::root().with_parent(lexical_scope.clone(), None);
                             let scoped_env_lock = Arc::new(RwLock::new(scoped_env));
 
                             if *collapse_input {

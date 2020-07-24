@@ -450,6 +450,7 @@ impl Operator {
                             params: func_args,
                             expressions: func_expressions,
                             collapse_input,
+                            lexical_scope: env.clone(),
                         },
                     ),
                     crate::Operator::Macro => Expression::new(
@@ -457,6 +458,7 @@ impl Operator {
                             params: func_args,
                             expressions: func_expressions,
                             collapse_input,
+                            lexical_scope: env.clone(),
                         },
                     ),
                     _ => unreachable!(),

@@ -1,5 +1,6 @@
-use crate::Expression;
-use std::fmt;
+use crate::{Environment, Expression};
+use std::sync::{Arc, RwLock};
+use std::{cmp, fmt};
 
 pub mod operator;
 pub use operator::Operator;
@@ -10,7 +11,7 @@ pub use symbol::Symbol;
 pub mod keyword;
 pub use keyword::Keyword;
 
-#[derive(Debug, Clone, PartialEq, PartialOrd)]
+#[derive(Debug, Clone)]
 pub enum Value {
     List(Vec<Expression>),
     Number(f64),
@@ -26,12 +27,43 @@ pub enum Value {
         params: Vec<Symbol>,
         expressions: Vec<Expression>,
         collapse_input: bool,
+        lexical_scope: Arc<RwLock<Environment>>,
     },
     Macro {
         params: Vec<Symbol>,
         expressions: Vec<Expression>,
         collapse_input: bool,
+        lexical_scope: Arc<RwLock<Environment>>,
     },
+}
+
+impl PartialEq for Value {
+    fn eq(&self, other: &Self) -> bool {
+        use Value::*;
+
+        match (self, other) {
+            (Number(l), Number(r)) => l == r,
+            (List(l), List(r)) => l == r,
+            (Text(l), Text(r)) => l == r,
+            (Keyword(l), Keyword(r)) => l == r,
+            (Symbol(l), Symbol(r)) => l == r,
+            (True, True) => true,
+            (Operator(l), Operator(r)) => l == r,
+            // TODO: Make lambda and macro their own types, then implement partialeq and partialord for
+            // them manually, then derive those traits for Value
+            _ => false,
+        }
+    }
+}
+
+impl PartialOrd for Value {
+    fn partial_cmp(&self, other: &Self) -> Option<cmp::Ordering> {
+        use Value::*;
+        match (self, other) {
+            (Number(l), Number(r)) => l.partial_cmp(r),
+            (_, _) => None,
+        }
+    }
 }
 
 impl Value {
@@ -77,6 +109,7 @@ impl<'a> fmt::Display for Value {
                 params,
                 expressions,
                 collapse_input,
+                lexical_scope,
             } => write!(
                 f,
                 "<lambda {}{}{} -> {}>",
@@ -103,6 +136,7 @@ impl<'a> fmt::Display for Value {
                 params,
                 expressions,
                 collapse_input,
+                lexical_scope,
             } => write!(
                 f,
                 "<macro {}{}{} -> {}>",
