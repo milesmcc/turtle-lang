@@ -7,6 +7,7 @@ extern crate rustyline_derive;
 #[macro_use]
 extern crate pest_derive;
 extern crate relative_path;
+extern crate regex;
 
 pub mod interpreter;
 pub mod parser;

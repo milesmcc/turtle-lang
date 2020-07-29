@@ -67,6 +67,7 @@ impl Environment {
             "list" => Some(Value::Operator(List)),
             "catch" => Some(Value::Operator(Catch)),
             "throw" => Some(Value::Operator(Throw)),
+            "format" => Some(Value::Operator(Format)),
             _ => None,
         }
     }
