@@ -130,7 +130,7 @@ impl fmt::Display for SourcePosition {
 }
 
 impl Source {
-    pub fn location(&self) -> String {
-        self.location()
+    pub fn location(&self) -> &str {
+        &self.location
     }
 }
