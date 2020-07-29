@@ -59,7 +59,7 @@ impl Expression {
     }
 
     pub fn eval(
-        &mut self,
+        &self,
         parent_snapshot: Arc<RwLock<CallSnapshot>>,
         env: Arc<RwLock<Environment>>
     ) -> Result<Self, Exception> {
@@ -69,7 +69,7 @@ impl Expression {
 
         let snap = || snapshot.clone();
 
-        match self.value.clone() {
+        match &self.value {
             List(vals) => {
                 if !vals.is_empty() {
                     let mut operator = vals.get(0).unwrap().clone();
