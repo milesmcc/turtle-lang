@@ -1,6 +1,6 @@
 use crate::{
     exp, exp_assert, parse, resolve_resource, CallSnapshot, Environment, Exception,
-    ExceptionValue as EV, Expression, Function, Value,
+    ExceptionValue as EV, Expression, Value,
 };
 use regex::Regex;
 use std::fmt;
@@ -585,7 +585,7 @@ impl Operator {
                     EV::ArgumentMismatch(arguments.len(), "1".to_string()),
                     snapshot
                 );
-                let mut value_str = match arguments
+                let value_str = match arguments
                     .get_mut(0)
                     .unwrap()
                     .eval(snap(), env.clone())?

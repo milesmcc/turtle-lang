@@ -1,5 +1,5 @@
 use std::fs;
-use std::os;
+
 use std::sync::{Arc, RwLock};
 
 extern crate ansi_term;

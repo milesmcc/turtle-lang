@@ -1,6 +1,6 @@
-use crate::{Environment, Expression};
-use std::sync::{Arc, RwLock};
-use std::{cmp, fmt};
+use crate::{Expression};
+
+use std::{fmt};
 
 pub mod operator;
 pub use operator::Operator;
