@@ -3,10 +3,15 @@ A Lispy programming language that, minus a small shell, is written in itself. It
 
 ## TODO
 - [x] Figure out why `(eq func func)` is false
-- [] Figure out namespaces
-- [] Move each operator into its own file (make an `Operator` trait?)
-- [] Add catch operator
-
+- [x] Figure out namespaces
+- [x] Move each operator into its own file (make an `Operator` trait?)
+- [x] Add catch operator
+- [] Add bytes
+- [] Add stringify
+- [] Add string to bytes
+- [] Add bytes to string
+- [] Add parse
+- [] Add sockets
 
 (func subst (from to content)
   (cond ((atom content)
