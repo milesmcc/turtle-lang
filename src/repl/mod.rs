@@ -96,10 +96,6 @@ pub fn spawn(env: Arc<RwLock<Environment>>) {
     rl.set_helper(Some(h));
 
     if rl.load_history(".turtle_history.txt").is_err() {
-        println!(
-            "Welcome to Turtle v{}, © 2020 R. Miles McCain (distributed under the MIT license)",
-            env!("CARGO_PKG_VERSION")
-        );
         println!("It looks like this is your first time running Turtle from this directory; no history was loaded.")
     }
 
