@@ -6,7 +6,7 @@ A Lispy programming language that, minus a small shell, is written in itself. It
 - [x] Figure out namespaces
 - [x] Move each operator into its own file (make an `Operator` trait?)
 - [x] Add catch operator
-- [] Add bytes
+- [x] Add bytes
 - [] Add stringify
 - [] Add string to bytes
 - [] Add bytes to string

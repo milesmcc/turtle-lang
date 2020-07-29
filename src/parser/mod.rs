@@ -76,6 +76,14 @@ fn build_expression(
                 Some(format!("`{}` is not a valid number", pair.as_str())),
             )),
         },
+        Rule::byte => match pair.as_str().replace('b', "").parse::<u8>() {
+            Ok(num) => Ok(Expression::new(Value::Byte(num)).with_source(pos)),
+            Err(_) => Err(Exception::new(
+                EV::Syntax,
+                None,
+                Some(format!("`{}` is not a valid byte (0-255)", pair.as_str())),
+            )),
+        },
         Rule::text => Ok(Expression::new(
             Value::Text(pair.into_inner().as_str().to_string()),
         )),

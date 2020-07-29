@@ -21,6 +21,7 @@ pub enum Value {
     Text(String),
     Keyword(Keyword),
     Symbol(Symbol),
+    Byte(u8),
     True,
 
     // Primitive (axiomatic) operators
@@ -41,6 +42,7 @@ impl Value {
             Keyword(_) => "keyword".to_string(),
             Symbol(_) => "symbol".to_string(),
             Operator(_) => "operator".to_string(),
+            Byte(_) => "byte".to_string(),
             Lambda { .. } => "lambda".to_string(),
             Macro { .. } => "macro".to_string(),
             _ => "unknown".to_string(),
@@ -68,6 +70,7 @@ impl<'a> fmt::Display for Value {
             Text(val) => write!(f, "{}", val),
             Symbol(val) => write!(f, "{}", val),
             Keyword(val) => write!(f, "{}", val),
+            Byte(val) => write!(f, "b{}", val),
             True => write!(f, "true"),
             Lambda(function) | Macro(function) => write!(
                 f,

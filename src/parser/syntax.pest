@@ -12,8 +12,9 @@ char = {
     | "\\" ~ ("u" ~ ASCII_HEX_DIGIT{4})
 }
 text = { "\"" ~ char* ~ "\"" }
+byte = @{ "b" ~ number}
 
-primitive = _{ list | keyword | text | number | symbol }
+primitive = _{ list | keyword | text | number | byte | symbol }
 
 // Functions & macros
 arg_symbols = { ("(" ~ symbol* ~ ")") }
