@@ -6,12 +6,17 @@
 (export 'setq exportq)
 
 ;; Helpful list operators
+(export 'drop (lambda '(n xs) '(cond ((gt n 1) xs) ('t (drop (sum n -1) (tail xs))))))
+(export 'nth (lambda '(n xs) '(car (drop n xs))))
 (export 'head car)
 (export 'tail cdr)
-(export 'first (lambda '(x) '(head x)))
-(export 'second (lambda '(x) '(head (tail x))))
-(export 'third (lambda '(x) '(head (tail (tail x)))))
-(export 'fourth (lambda '(x) '(head (tail (tail (tail x))))))
+(export 'first (lambda '(x) '(nth 0 x)))
+(export 'second (lambda '(x) '(nth 1 x)))
+(export 'third (lambda '(x) '(nth 2 x)))
+(export 'last (lambda '(x) '(nth (sum (length x) -1) x)))
+(export 'filter (lambda '(criteria x) '(cond (x (cond ((criteria (first x)) (cons (first x) (filter criteria (tail x)))) ('t (filter criteria (tail x))))) ('t ()))))
+(export 'remove (lambda '(n xs) '(cond ((eq n 0) (tail xs)) ('t (cons (first xs) (remove (sum n -1) (tail xs)))))))
+(export 'reverse (lambda '(xs) '(cond (xs (cons (last xs) (reverse (remove (sum (length xs) -1) xs)))) ('t ()))))
 
 ;; Macros
 (export 'metafunc (macro 'args '(export (first args) (macro (second args) (first (tail (tail args)))))))
