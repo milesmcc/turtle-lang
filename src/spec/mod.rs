@@ -5,7 +5,7 @@ fn exec(code: &str) -> Result<Expression, Exception> {
     let root = Arc::new(RwLock::new(Environment::root()));
     let expressions = parse(code, "<test module>")?;
     let mut ret = Expression::nil();
-    for mut expression in expressions {
+    for expression in expressions {
         ret = expression.eval(CallSnapshot::root(&expression), root.clone())?
     }
     Ok(ret)

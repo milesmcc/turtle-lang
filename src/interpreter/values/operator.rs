@@ -92,7 +92,7 @@ impl Operator {
                 );
 
                 let mut prev: Option<Expression> = None;
-                for mut argument in arguments {
+                for argument in arguments {
                     let evaled = argument.eval(snap(), env.clone())?;
                     match &prev {
                         None => prev = Some(evaled),
@@ -245,7 +245,7 @@ impl Operator {
             }
             Sum => {
                 let mut sum = 0.0;
-                for mut arg in arguments {
+                for arg in arguments {
                     match arg.eval(snap(), env.clone())?.into_value() {
                         Number(val) => sum += val,
                         val => exp!(
@@ -259,7 +259,7 @@ impl Operator {
             }
             Prod => {
                 let mut prod = 1.0;
-                for mut arg in arguments {
+                for arg in arguments {
                     match arg.eval(snap(), env.clone())?.into_value() {
                         Number(val) => prod *= val,
                         val => exp!(
@@ -332,7 +332,7 @@ impl Operator {
             }
             Gt => {
                 let mut args_evaled = Vec::with_capacity(arguments.len());
-                for mut arg in arguments {
+                for arg in arguments {
                     args_evaled.push(arg.eval(snap(), env.clone())?);
                 }
                 match args_evaled
@@ -347,7 +347,7 @@ impl Operator {
             }
             Ge => {
                 let mut args_evaled = Vec::with_capacity(arguments.len());
-                for mut arg in arguments {
+                for arg in arguments {
                     args_evaled.push(arg.eval(snap(), env.clone())?);
                 }
                 match args_evaled
@@ -375,7 +375,7 @@ impl Operator {
                 Ok(Expression::new(arg_type))
             }
             Disp => {
-                for mut arg in arguments {
+                for arg in arguments {
                     println!("{}", arg.eval(snap(), env.clone())?);
                 }
                 Ok(Expression::nil())
@@ -438,7 +438,7 @@ impl Operator {
                     EV::ArgumentMismatch(arguments.len(), "2+".to_string()),
                     snapshot
                 );
-                let mut condition = arguments.remove(0);
+                let condition = arguments.remove(0);
                 let mut result = Expression::nil();
                 while condition.eval(snap(), env.clone())? != Expression::nil() {
                     for action in &mut arguments {
@@ -508,7 +508,7 @@ impl Operator {
             }
             crate::Operator::List => {
                 let mut args_evaled = Vec::new();
-                for mut argument in arguments {
+                for argument in arguments {
                     args_evaled.push(argument.eval(snap(), env.clone())?);
                 }
                 Ok(Expression::new(Value::List(args_evaled)))
@@ -641,7 +641,7 @@ impl Operator {
                     snapshot
                 );
                 let mut new_list: Vec<Expression> = Vec::with_capacity(arguments.len());
-                for mut argument in arguments {
+                for argument in arguments {
                     match argument.eval(snap(), env.clone())?.into_value() {
                         Value::List(values) => new_list.extend(values),
                         other => exp!(EV::InvalidArgument, snapshot, format!("append requires all its arguments to be a list (got `{}`)", other))

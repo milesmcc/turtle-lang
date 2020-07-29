@@ -72,7 +72,7 @@ impl Expression {
         match &self.value {
             List(vals) => {
                 if !vals.is_empty() {
-                    let mut operator = vals.get(0).unwrap().clone();
+                    let operator = vals.get(0).unwrap().clone();
                     let arguments: Vec<Expression> = vals.iter().skip(1).cloned().collect();
                     match &operator.value {
                         Operator(operand) => operand.apply(snapshot, arguments, self, env),
@@ -133,7 +133,7 @@ impl Expression {
                                 }
                             }
                             let mut result = Expression::nil();
-                            for mut exp in function.expressions.clone() {
+                            for exp in function.expressions.clone() {
                                 result = exp.eval(snap(), scoped_env_lock.clone())?;
                             }
                             Ok(result)

@@ -79,7 +79,7 @@ pub fn resolve_resource(
     let parsed = parse(&content, &path.to_string())?;
 
     let mut return_val = Expression::nil();
-    for mut exp in parsed {
+    for exp in parsed {
         return_val = exp.eval(CallSnapshot::new(&exp, &snapshot)?, env.clone())?;
     }
     Ok(return_val)

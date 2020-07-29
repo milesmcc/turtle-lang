@@ -61,7 +61,7 @@ fn main() {
     if !matches.is_present("NO_PRELUDE") {
         match parse("(import \"@prelude\")", "<builtin>") {
             Ok(expressions) => {
-                for mut expression in expressions {
+                for expression in expressions {
                     let snapshot = CallSnapshot::root(&expression);
                     match expression.eval(snapshot, env.clone()) {
                         Ok(_) => {}
@@ -85,7 +85,7 @@ fn main() {
                         std::process::exit(2);
                     }
                 };
-                for mut val in exp_parsed {
+                for val in exp_parsed {
                     match val.eval(CallSnapshot::root(&val), env.clone()) {
                         Ok(_) => {}
                         Err(err) => {
