@@ -14,7 +14,7 @@ pub use keyword::Keyword;
 pub mod function;
 pub use function::Function;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, PartialOrd)]
 pub enum Value {
     List(Vec<Expression>),
     Number(f64),
@@ -28,35 +28,6 @@ pub enum Value {
 
     Lambda(Function),
     Macro(Function),
-}
-
-impl PartialEq for Value {
-    fn eq(&self, other: &Self) -> bool {
-        use Value::*;
-
-        match (self, other) {
-            (Number(l), Number(r)) => l == r,
-            (List(l), List(r)) => l == r,
-            (Text(l), Text(r)) => l == r,
-            (Keyword(l), Keyword(r)) => l == r,
-            (Symbol(l), Symbol(r)) => l == r,
-            (True, True) => true,
-            (Operator(l), Operator(r)) => l == r,
-            // TODO: Make lambda and macro their own types, then implement partialeq and partialord for
-            // them manually, then derive those traits for Value
-            _ => false,
-        }
-    }
-}
-
-impl PartialOrd for Value {
-    fn partial_cmp(&self, other: &Self) -> Option<cmp::Ordering> {
-        use Value::*;
-        match (self, other) {
-            (Number(l), Number(r)) => l.partial_cmp(r),
-            (_, _) => None,
-        }
-    }
 }
 
 impl Value {
