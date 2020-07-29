@@ -49,7 +49,7 @@ impl Operator {
     pub fn apply(
         &self,
         snapshot: Arc<RwLock<CallSnapshot>>,
-        mut arguments: Vec<Expression>,
+        arguments: Vec<&Expression>,
         expr: &Expression,
         env: Arc<RwLock<Environment>>,
     ) -> Result<Expression, Exception> {
@@ -66,7 +66,8 @@ impl Operator {
                         snapshot
                     );
                 }
-                Ok(arguments.remove(0))
+                let arg = *arguments.get(0).unwrap();
+                Ok(arg.clone())
             }
             Atom => {
                 exp_assert!(
@@ -75,7 +76,7 @@ impl Operator {
                     snapshot
                 );
                 match arguments
-                    .get_mut(0)
+                    .get(0)
                     .unwrap()
                     .eval(snapshot, env)?
                     .into_value()
@@ -119,7 +120,7 @@ impl Operator {
                     snap()
                 );
 
-                let list = arguments.get_mut(0).unwrap().eval(snap(), env)?;
+                let list = arguments.get(0).unwrap().eval(snap(), env)?;
 
                 match list.into_value() {
                     Value::List(mut vals) => {
@@ -144,7 +145,7 @@ impl Operator {
                     EV::ArgumentMismatch(arguments.len(), "1".to_string()),
                     snap()
                 );
-                let list = arguments.get_mut(0).unwrap().eval(snap(), env)?;
+                let list = arguments.get(0).unwrap().eval(snap(), env)?;
                 match list.into_value() {
                     Value::List(mut vals) => {
                         if !vals.is_empty() {
@@ -165,8 +166,8 @@ impl Operator {
                     EV::ArgumentMismatch(arguments.len(), "2".to_string()),
                     snap()
                 );
-                let first = arguments.get_mut(0).unwrap().eval(snap(), env.clone())?;
-                let list = arguments.get_mut(1).unwrap().eval(snap(), env.clone())?;
+                let first = arguments.get(0).unwrap().eval(snap(), env.clone())?;
+                let list = arguments.get(1).unwrap().eval(snap(), env.clone())?;
                 match list.into_value() {
                     Value::List(mut vals) => {
                         vals.insert(0, first);
@@ -183,9 +184,9 @@ impl Operator {
                 }
             }
             Cond => {
-                for argument in arguments {
-                    match argument.into_value() {
-                        Value::List(mut elems) => {
+                for argument in &arguments {
+                    match argument.get_value() {
+                        Value::List(elems) => {
                             exp_assert!(
                                 elems.len() == 2,
                                 EV::InvalidArgument,
@@ -195,9 +196,9 @@ impl Operator {
                                     elems.len()
                                 )
                             );
-                            let cond = { elems.get_mut(0).unwrap() };
+                            let cond = { elems.get(0).unwrap() };
                             if cond.eval(snap(), env.clone())? != Expression::nil() {
-                                let val = { elems.get_mut(1).unwrap() };
+                                let val = { elems.get(1).unwrap() };
                                 return val.eval(snapshot, env);
                             }
                         }
@@ -217,7 +218,7 @@ impl Operator {
                     snap()
                 );
                 let sym_exp = arguments
-                    .remove(0)
+                    .get(0).unwrap()
                     .eval(snap(), env.clone())?;
                 let symbol = match sym_exp.into_value() {
                     Symbol(sym) => sym,
@@ -231,7 +232,7 @@ impl Operator {
                     ),
                 };
 
-                let assigned_expr = arguments.remove(0).eval(snap(), env.clone())?;
+                let assigned_expr = arguments.get(1).unwrap().eval(snap(), env.clone())?;
                 env.write().unwrap().assign(
                     symbol,
                     assigned_expr,
@@ -278,12 +279,12 @@ impl Operator {
                     snap()
                 );
                 let base = arguments
-                    .get_mut(0)
+                    .get(0)
                     .unwrap()
                     .eval(snap(), env.clone())?
                     .into_value();
                 let exp = arguments
-                    .get_mut(1)
+                    .get(1)
                     .unwrap()
                     .eval(snap(), env.clone())?
                     .into_value();
@@ -308,12 +309,12 @@ impl Operator {
                     snap()
                 );
                 let val = arguments
-                    .get_mut(0)
+                    .get(0)
                     .unwrap()
                     .eval(snap(), env.clone())?
                     .into_value();
                 let modu = arguments
-                    .get_mut(1)
+                    .get(1)
                     .unwrap()
                     .eval(snap(), env.clone())?
                     .into_value();
@@ -367,7 +368,7 @@ impl Operator {
                     snap()
                 );
                 let arg_type = arguments
-                    .get_mut(0)
+                    .get(0)
                     .unwrap()
                     .eval(snap(), env)?
                     .into_value()
@@ -387,7 +388,7 @@ impl Operator {
                         snapshot
                     );
                 }
-                let path = match arguments.get_mut(0).unwrap().eval(snap(), env.clone())?.into_value() {
+                let path = match arguments.get(0).unwrap().eval(snap(), env.clone())?.into_value() {
                     Text(val) => val,
                     val => exp!(
                         EV::InvalidArgument,
@@ -399,7 +400,7 @@ impl Operator {
                     ),
                 };
 
-                let namespace = match arguments.get_mut(1) {
+                let namespace = match arguments.get(1) {
                     Some(val) => match val.eval(snap(), env.clone())?.into_value() {
                         Keyword(val) => Some(val.string_value().clone()),
                         val => exp!(
@@ -427,7 +428,7 @@ impl Operator {
                     );
                 }
                 arguments
-                    .get_mut(0)
+                    .get(0)
                     .unwrap()
                     .eval(snap(), env.clone())?
                     .eval(snap(), env.clone())
@@ -438,10 +439,10 @@ impl Operator {
                     EV::ArgumentMismatch(arguments.len(), "2+".to_string()),
                     snapshot
                 );
-                let condition = arguments.remove(0);
+                let condition = arguments.get(0).unwrap();
                 let mut result = Expression::nil();
                 while condition.eval(snap(), env.clone())? != Expression::nil() {
-                    for action in &mut arguments {
+                    for action in arguments.iter().skip(1) {
                         result = action.eval(snap(), env.clone())?
                     }
                 }
@@ -456,7 +457,7 @@ impl Operator {
 
                 let mut collapse_input = true;
                 let func_args = match arguments
-                    .get_mut(0)
+                    .get(0)
                     .unwrap()
                     .eval(snap(), env.clone())?
                     .into_value()
@@ -483,7 +484,7 @@ impl Operator {
                     ),
                 };
                 let mut func_expressions = Vec::new();
-                for arg_expr in arguments.iter_mut().skip(1) {
+                for arg_expr in arguments.iter().skip(1) {
                     func_expressions.push(arg_expr.eval(snap(), env.clone())?);
                 }
 
@@ -519,8 +520,8 @@ impl Operator {
                     EV::ArgumentMismatch(arguments.len(), "2".to_string()),
                     snapshot
                 );
-                let action = arguments.get_mut(0).unwrap().eval(snap(), env.clone());
-                let catch_func = arguments.get_mut(1).unwrap().eval(snap(), env.clone())?;
+                let action = arguments.get(0).unwrap().eval(snap(), env.clone());
+                let catch_func = arguments.get(1).unwrap().eval(snap(), env.clone())?;
                 match action {
                     Ok(exp) => Ok(exp),
                     Err(err) => {
@@ -543,7 +544,7 @@ impl Operator {
                     snapshot
                 );
                 Err(Exception::new(
-                    EV::Other(arguments.get_mut(0).unwrap().eval(snap(), env)?),
+                    EV::Other(arguments.get(0).unwrap().eval(snap(), env)?),
                     Some(snap()),
                     None,
                 ))
@@ -555,7 +556,7 @@ impl Operator {
                     snapshot
                 );
                 let mut literal = match arguments
-                    .get_mut(0)
+                    .get(0)
                     .unwrap()
                     .eval(snap(), env.clone())?
                     .into_value()
@@ -574,7 +575,7 @@ impl Operator {
                 for i in 1..arguments.len() {
                     let replace_with = format!(
                         "{}",
-                        arguments.get_mut(i).unwrap().eval(snap(), env.clone())?
+                        arguments.get(i).unwrap().eval(snap(), env.clone())?
                     );
                     literal = String::from(placeholder.replace(&literal, replace_with.as_str()));
                 }
@@ -587,7 +588,7 @@ impl Operator {
                     snapshot
                 );
                 let value_str = match arguments
-                    .get_mut(0)
+                    .get(0)
                     .unwrap()
                     .eval(snap(), env.clone())?
                     .into_value()
@@ -618,7 +619,7 @@ impl Operator {
                     snapshot
                 );
                 match arguments
-                    .get_mut(0)
+                    .get(0)
                     .unwrap()
                     .eval(snap(), env)?
                     .into_value()

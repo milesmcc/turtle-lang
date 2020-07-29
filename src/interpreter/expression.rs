@@ -72,15 +72,15 @@ impl Expression {
         match &self.value {
             List(vals) => {
                 if !vals.is_empty() {
-                    let operator = vals.get(0).unwrap().clone();
-                    let arguments: Vec<Expression> = vals.iter().skip(1).cloned().collect();
+                    let operator = vals.get(0).unwrap();
+                    let arguments: Vec<&Expression> = vals.iter().skip(1).collect();
                     match &operator.value {
                         Operator(operand) => operand.apply(snapshot, arguments, self, env),
                         List(_) | Symbol(_) => {
                             let evaled_operator = operator.eval(snap(), env.clone())?;
                             let mut new_list = vec![evaled_operator];
                             for arg in arguments {
-                                new_list.push(arg);
+                                new_list.push(arg.clone());
                             }
                             Expression::new(Value::List(new_list)).eval(snap(), env)
                         }
@@ -95,7 +95,7 @@ impl Expression {
                                     let mut list = Vec::new();
                                     for arg_expr in arguments {
                                         list.push(match &operator.value {
-                                            Lambda { .. } => arg_expr.clone().eval(snap(), env.clone())?,
+                                            Lambda { .. } => arg_expr.eval(snap(), env.clone())?,
                                             Macro { .. } => arg_expr.clone(),
                                             _ => unreachable!(),
                                         });
@@ -104,9 +104,7 @@ impl Expression {
                                 };
                                 let arg =
                                     Expression::new(Value::List(args_evaled));
-                                for _exp in function.expressions.clone() {
-                                    scoped_env_lock.write().unwrap().assign(sym.clone(), arg.clone(), true, snap())?;
-                                }
+                                scoped_env_lock.write().unwrap().assign(sym.clone(), arg, true, snap())?;
                             } else {
                                 exp_assert!(
                                     function.params.len() == arguments.len(),
@@ -116,24 +114,22 @@ impl Expression {
                                     ),
                                     snap()
                                 );
-                                for (symbol, arg_expr) in function.params.iter().zip(arguments.iter()) {
+                                for (symbol, arg_expr) in function.params.iter().zip(arguments.into_iter()) {
                                     let arg_evaled = match &operator.value {
-                                        Lambda { .. } => arg_expr.clone().eval(snap(), env.clone())?,
+                                        Lambda { .. } => arg_expr.eval(snap(), env.clone())?,
                                         Macro { .. } => arg_expr.clone(),
                                         _ => unreachable!(),
                                     };
-                                    for _exp in function.expressions.clone() {
-                                        scoped_env_lock.write().unwrap().assign(
-                                            symbol.clone(),
-                                            arg_evaled.clone(),
-                                            true,
-                                            snap()
-                                        )?;
-                                    }
+                                    scoped_env_lock.write().unwrap().assign(
+                                        symbol.clone(),
+                                        arg_evaled,
+                                        true,
+                                        snap()
+                                    )?;
                                 }
                             }
                             let mut result = Expression::nil();
-                            for exp in function.expressions.clone() {
+                            for exp in &function.expressions {
                                 result = exp.eval(snap(), scoped_env_lock.clone())?;
                             }
                             Ok(result)
