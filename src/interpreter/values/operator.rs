@@ -35,6 +35,8 @@ pub enum Operator {
     Throw,
     Format,
     Parse,
+    Length,
+    Append,
 }
 
 impl fmt::Display for Operator {
@@ -434,15 +436,16 @@ impl Operator {
             }
             While => {
                 exp_assert!(
-                    arguments.len() == 2,
-                    EV::ArgumentMismatch(arguments.len(), "2".to_string()),
+                    arguments.len() >= 2,
+                    EV::ArgumentMismatch(arguments.len(), "2+".to_string()),
                     snapshot
                 );
-                let condition = arguments.get(0).unwrap();
-                let action = arguments.get(1).unwrap();
+                let condition = arguments.remove(0);
                 let mut result = Expression::nil();
                 while condition.clone().eval(snap(), env.clone())? != Expression::nil() {
-                    result = action.clone().eval(snap(), env.clone())?
+                    for action in &arguments {
+                        result = action.clone().eval(snap(), env.clone())?
+                    }
                 }
                 Ok(result)
             }
@@ -609,6 +612,44 @@ impl Operator {
                     )
                 );
                 Ok(values.get_mut(0).unwrap().clone())
+            }
+            Length => {
+                exp_assert!(
+                    arguments.len() == 1,
+                    EV::ArgumentMismatch(arguments.len(), "1".to_string()),
+                    snapshot
+                );
+                match arguments
+                    .get_mut(0)
+                    .unwrap()
+                    .eval(snap(), env)?
+                    .into_value()
+                {
+                    Value::List(vals) => Ok(Expression::new(Value::Number(vals.len() as f64))),
+                    other => exp!(
+                        EV::InvalidArgument,
+                        snapshot,
+                        format!(
+                            "length expects a list as its first argument (got `{}`)",
+                            other
+                        )
+                    ),
+                }
+            }
+            Append => {
+                exp_assert!(
+                    arguments.len() >= 1,
+                    EV::ArgumentMismatch(arguments.len(), "1+".to_string()),
+                    snapshot
+                );
+                let mut new_list: Vec<Expression> = Vec::with_capacity(arguments.len());
+                for mut argument in arguments {
+                    match argument.eval(snap(), env.clone())?.into_value() {
+                        Value::List(values) => new_list.extend(values),
+                        other => exp!(EV::InvalidArgument, snapshot, format!("append requires all its arguments to be a list (got `{}`)", other))
+                    }
+                }
+                Ok(Expression::new(Value::List(new_list)))
             }
         }
     }

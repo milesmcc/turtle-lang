@@ -69,6 +69,8 @@ impl Environment {
             "throw" => Some(Value::Operator(Throw)),
             "format" => Some(Value::Operator(Format)),
             "parse" => Some(Value::Operator(Parse)),
+            "length" => Some(Value::Operator(Length)),
+            "append" => Some(Value::Operator(Append)),
             _ => None,
         }
     }
