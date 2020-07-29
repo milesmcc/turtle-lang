@@ -1,6 +1,6 @@
 use crate::{
-    exp, exp_assert, resolve_resource, CallSnapshot, Environment, Exception, ExceptionValue as EV,
-    Expression, Function, Value,
+    exp, exp_assert, parse, resolve_resource, CallSnapshot, Environment, Exception,
+    ExceptionValue as EV, Expression, Function, Value,
 };
 use regex::Regex;
 use std::fmt;
@@ -34,6 +34,7 @@ pub enum Operator {
     Catch,
     Throw,
     Format,
+    Parse,
 }
 
 impl fmt::Display for Operator {
@@ -577,6 +578,37 @@ impl Operator {
                     literal = String::from(placeholder.replace(&literal, replace_with.as_str()));
                 }
                 Ok(Expression::new(Value::Text(literal)))
+            }
+            Parse => {
+                exp_assert!(
+                    arguments.len() == 1,
+                    EV::ArgumentMismatch(arguments.len(), "1".to_string()),
+                    snapshot
+                );
+                let mut value_str = match arguments
+                    .get_mut(0)
+                    .unwrap()
+                    .eval(snap(), env.clone())?
+                    .into_value()
+                {
+                    Text(value) => value,
+                    other => exp!(
+                        EV::InvalidArgument,
+                        snapshot,
+                        format!("the argument of `parse` must be text (got `{}`)", other)
+                    ),
+                };
+                let mut values = parse(&value_str, "<parse>")?;
+                exp_assert!(
+                    values.len() == 1,
+                    EV::InvalidArgument,
+                    snapshot,
+                    format!(
+                        "`parse` can only handle a single value, not {}",
+                        values.len()
+                    )
+                );
+                Ok(values.get_mut(0).unwrap().clone())
             }
         }
     }

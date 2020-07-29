@@ -128,3 +128,9 @@ impl fmt::Display for SourcePosition {
         write!(f, "")
     }
 }
+
+impl Source {
+    pub fn location(&self) -> String {
+        self.location()
+    }
+}
