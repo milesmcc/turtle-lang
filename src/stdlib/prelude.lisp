@@ -30,6 +30,7 @@
 
 ;; Math constants
 (export 'pi 3.14159265358979323846)
+(export 'tau (prod 2 pi))
 (export 'e 2.71828182845904523536)
 
 ;; Basic math operators  
@@ -42,10 +43,15 @@
 (metafunc -- (a) (set a (+ ,a -1)))
 (metafunc increasing elems ,(cons ge elems))
 (metafunc strictly-increasing elems ,(cons gt elems))
-;; implement increasing and strictly increasing using the reverse operator
+(metafunc decreasing elems ,(cons ge (reverse elems)))
+(metafunc strictly-decreasing elems ,(cons gt (reverse elems)))
+(export 'fac '(lambda '(x) '(cond ((ge x 0) 1) ('t (* x (fac (- x 1)))))))
 
-;; Trigonometry
-;; TODO
+;; Trignometry
+(let 'sinseries '(lambda '(x) '(+ x (/ (exp x 3) -6) (/ (exp x 5) 120) (/ (exp x 7) -5040) (/ (exp x 9) 362880) (/ (exp x 11) -39916800) (/ (exp x 13) 6227020800) (/ (exp x 15) (* -1 (fac 15))))))
+(export 'sin '(lambda '(x) '(* -1 (sinseries (- (modulo x tau) pi)))))
+(export 'cos '(lambda '(x) '(sin (+ x (/ pi 2)))))
+(export 'tan '(lambda '(x) '(/ (sin x) (cos x))))
 
 ;; Boolean operators
 (func not (val) (cond (val ()) ('t 't)))
