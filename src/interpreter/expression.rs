@@ -116,18 +116,17 @@ impl Expression {
                             Expression::new(Value::List(new_list)).eval(snap(), env)
                         }
                         Lambda(function) | Macro(function) => {
-                            let scoped_env = match &operator.value {
+                            let mut scoped_env = match &operator.value {
                                 Lambda(_) => Environment::root()
                                     .with_parent(function.lexical_scope.clone(), None),
                                 Macro(_) => {
                                     let mut env =
-                                        Environment::root().shadow().with_parent(env.clone(), None);
+                                        Environment::root().with_parent(env.clone(), None);
                                     env.add_parent(function.lexical_scope.clone(), None);
                                     env
                                 }
                                 _ => unreachable!(),
                             };
-                            let scoped_env_lock = Arc::new(RwLock::new(scoped_env));
 
                             if function.collapse_input {
                                 let sym = function.params.get(0).unwrap(); // this unwrap will always be ok; it is enforced by the parser
@@ -143,12 +142,7 @@ impl Expression {
                                     list
                                 };
                                 let arg = Expression::new(Value::List(args_evaled));
-                                scoped_env_lock.write().unwrap().assign(
-                                    sym.clone(),
-                                    arg,
-                                    true,
-                                    snap(),
-                                )?;
+                                scoped_env.assign(sym.clone(), arg, true, snap())?;
                             } else {
                                 exp_assert!(
                                     function.params.len() == arguments.len(),
@@ -166,15 +160,17 @@ impl Expression {
                                         Macro { .. } => arg_expr.clone(),
                                         _ => unreachable!(),
                                     };
-                                    scoped_env_lock.write().unwrap().assign(
-                                        symbol.clone(),
-                                        arg_evaled,
-                                        true,
-                                        snap(),
-                                    )?;
+                                    scoped_env.assign(symbol.clone(), arg_evaled, true, snap())?;
                                 }
                             }
+                            match &operator.value {
+                                Macro { .. } => {
+                                    scoped_env = scoped_env.shadow();
+                                }
+                                _ => {}
+                            };
                             let mut result = Expression::nil();
+                            let scoped_env_lock = Arc::new(RwLock::new(scoped_env));
                             for exp in &function.expressions {
                                 result = exp.eval(snap(), scoped_env_lock.clone())?;
                             }

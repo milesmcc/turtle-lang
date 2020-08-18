@@ -123,7 +123,7 @@ impl Environment {
             return Some((exp, best_match.1 + 1));
         }
         match Self::get_literal(symbol) {
-            Some(value) => Some((Arc::new(RwLock::new(Expression::new(value))), 0)),
+            Some(value) => Some((Arc::new(RwLock::new(Expression::new(value))), 9999)),
             None => None,
         }
     }
