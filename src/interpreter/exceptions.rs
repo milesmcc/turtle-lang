@@ -1,4 +1,6 @@
-use crate::{parser, CallSnapshot, Keyword, SourcePosition, Symbol, Value, Expression, Environment};
+use crate::{
+    parser, CallSnapshot, Environment, Expression, Keyword, SourcePosition, Symbol, Value,
+};
 use ansi_term::{Color, Style};
 use std::error::Error;
 use std::fmt;
@@ -46,7 +48,8 @@ pub enum ExceptionValue {
     InvalidIncludePath(String),
     InvalidOperator(Value),
     StackOverflow,
-    Assignment(Symbol, Expression)
+    Assignment(Symbol, Expression),
+    Concurrency,
 }
 
 impl ExceptionValue {
@@ -72,6 +75,9 @@ impl ExceptionValue {
             ),
             StackOverflow => "the call stack exceeded the limit (500)".to_string(),
             Assignment(sym, exp) => format!("could not assign `{}` to `{}`", sym, exp),
+            Concurrency => {
+                "something went wrong when evaluating this expression concurrently".to_string()
+            }
         }
     }
 
@@ -82,14 +88,31 @@ impl ExceptionValue {
 
         match self {
             Other(expression) => expression,
-            UndefinedSymbol(_) => Expression::new(Value::Keyword(Keyword::from_str("undefined-symbol-exp"))),
-            ArgumentMismatch(_, _) => Expression::new(Value::Keyword(Keyword::from_str("argument-mismatch-exp"))),
+            UndefinedSymbol(_) => {
+                Expression::new(Value::Keyword(Keyword::from_str("undefined-symbol-exp")))
+            }
+            ArgumentMismatch(_, _) => {
+                Expression::new(Value::Keyword(Keyword::from_str("argument-mismatch-exp")))
+            }
             Syntax => Expression::new(Value::Keyword(Keyword::from_str("syntax-exp"))),
-            InvalidArgument => Expression::new(Value::Keyword(Keyword::from_str("invalid-argument-exp"))),
-            InvalidIncludePath(_) => Expression::new(Value::Keyword(Keyword::from_str("invalid-include-path-exp"))),
-            InvalidOperator(_) => Expression::new(Value::Keyword(Keyword::from_str("invalid-operator-exp"))),
-            StackOverflow => Expression::new(Value::Keyword(Keyword::from_str("stack-overflow-exp"))),
-            Assignment(_, _) => Expression::new(Value::Keyword(Keyword::from_str("assignment-exp"))),
+            InvalidArgument => {
+                Expression::new(Value::Keyword(Keyword::from_str("invalid-argument-exp")))
+            }
+            InvalidIncludePath(_) => Expression::new(Value::Keyword(Keyword::from_str(
+                "invalid-include-path-exp",
+            ))),
+            InvalidOperator(_) => {
+                Expression::new(Value::Keyword(Keyword::from_str("invalid-operator-exp")))
+            }
+            StackOverflow => {
+                Expression::new(Value::Keyword(Keyword::from_str("stack-overflow-exp")))
+            }
+            Assignment(_, _) => {
+                Expression::new(Value::Keyword(Keyword::from_str("assignment-exp")))
+            }
+            Concurrency => {
+                Expression::new(Value::Keyword(Keyword::from_str("concurrency-exp")))
+            }
         }
     }
 }

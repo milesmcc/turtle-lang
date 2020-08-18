@@ -235,14 +235,14 @@ impl Operator {
                 let assigned_expr = arguments.get(1).unwrap().eval(snap(), env.clone())?;
                 env.write().unwrap().assign(
                     symbol,
-                    assigned_expr,
+                    assigned_expr.clone(),
                     match self {
                         Export => false,
                         _ => true,
                     },
                     snap(),
                 )?;
-                Ok(Expression::nil())
+                Ok(assigned_expr)
             }
             Sum => {
                 let mut sum = 0.0;

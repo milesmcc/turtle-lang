@@ -1,5 +1,7 @@
 use std::fmt;
+use std::sync::mpsc;
 use std::sync::{Arc, RwLock};
+use std::thread;
 
 use crate::{
     exp, exp_assert, CallSnapshot, Environment, Exception, ExceptionValue as EV, SourcePosition,
@@ -58,10 +60,39 @@ impl Expression {
         &self.source
     }
 
+    pub fn eval_async(
+        self,
+        parent_snapshot: Arc<RwLock<CallSnapshot>>,
+        env: Arc<RwLock<Environment>>,
+    ) -> Result<mpsc::Receiver<Result<Self, Exception>>, Exception> {
+        let exp = self.clone();
+        let snap = parent_snapshot.clone();
+        // TODO: do this without clone
+        let (sender, receiver) = mpsc::channel::<Result<Self, Exception>>();
+        match thread::Builder::new()
+            .stack_size(64 * 1024 * 1024)
+            .spawn(move || {
+                sender.send(exp.eval(snap, env)).unwrap();
+            }) {
+            Ok(th) => match th.join() {
+                Ok(_) => {}
+                Err(_) => {
+                    return Err(Exception::new(
+                        EV::Concurrency,
+                        Some(parent_snapshot),
+                        Some("could not wait for thread to finish executing".to_string()),
+                    ))
+                }
+            },
+            Err(_) => {}
+        };
+        Ok(receiver)
+    }
+
     pub fn eval(
         &self,
         parent_snapshot: Arc<RwLock<CallSnapshot>>,
-        env: Arc<RwLock<Environment>>
+        env: Arc<RwLock<Environment>>,
     ) -> Result<Self, Exception> {
         use Value::*;
 
@@ -84,9 +115,9 @@ impl Expression {
                             }
                             Expression::new(Value::List(new_list)).eval(snap(), env)
                         }
-                        Lambda(function)
-                        | Macro(function) => {
-                            let scoped_env = Environment::root().with_parent(function.lexical_scope.clone(), None);
+                        Lambda(function) | Macro(function) => {
+                            let scoped_env = Environment::root()
+                                .with_parent(function.lexical_scope.clone(), None);
                             let scoped_env_lock = Arc::new(RwLock::new(scoped_env));
 
                             if function.collapse_input {
@@ -102,9 +133,13 @@ impl Expression {
                                     }
                                     list
                                 };
-                                let arg =
-                                    Expression::new(Value::List(args_evaled));
-                                scoped_env_lock.write().unwrap().assign(sym.clone(), arg, true, snap())?;
+                                let arg = Expression::new(Value::List(args_evaled));
+                                scoped_env_lock.write().unwrap().assign(
+                                    sym.clone(),
+                                    arg,
+                                    true,
+                                    snap(),
+                                )?;
                             } else {
                                 exp_assert!(
                                     function.params.len() == arguments.len(),
@@ -114,7 +149,9 @@ impl Expression {
                                     ),
                                     snap()
                                 );
-                                for (symbol, arg_expr) in function.params.iter().zip(arguments.into_iter()) {
+                                for (symbol, arg_expr) in
+                                    function.params.iter().zip(arguments.into_iter())
+                                {
                                     let arg_evaled = match &operator.value {
                                         Lambda { .. } => arg_expr.eval(snap(), env.clone())?,
                                         Macro { .. } => arg_expr.clone(),
@@ -124,7 +161,7 @@ impl Expression {
                                         symbol.clone(),
                                         arg_evaled,
                                         true,
-                                        snap()
+                                        snap(),
                                     )?;
                                 }
                             }
@@ -140,7 +177,11 @@ impl Expression {
                     Ok(self.clone())
                 }
             }
-            Symbol(sym) => match env.read().expect("unable to access environment (are threads locked?)").lookup(&sym) {
+            Symbol(sym) => match env
+                .read()
+                .expect("unable to access environment (are threads locked?)")
+                .lookup(&sym)
+            {
                 Some(exp) => Ok(exp.read().unwrap().clone()), // TODO: make this not need a clone (allow returning pointers)
                 None => exp!(EV::UndefinedSymbol(sym.clone()), snapshot),
             },

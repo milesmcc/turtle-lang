@@ -6,7 +6,8 @@ fn exec(code: &str) -> Result<Expression, Exception> {
     let expressions = parse(code, "<test module>")?;
     let mut ret = Expression::nil();
     for expression in expressions {
-        ret = expression.eval(CallSnapshot::root(&expression), root.clone())?
+        let snapshot = CallSnapshot::root(&expression);
+        ret = expression.eval_async(snapshot, root.clone())?.recv().unwrap()?;
     }
     Ok(ret)
 }

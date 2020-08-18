@@ -12,6 +12,7 @@ A Lispy programming language that, minus a small shell, is written in itself. It
 - [] Add bytes to string
 - [] Add parse
 - [] Add sockets
+- [] Fix increasing, letq, exportq, and metafuncs in general
 
 (func subst (from to content)
   (cond ((atom content)

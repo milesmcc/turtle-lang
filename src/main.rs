@@ -56,60 +56,51 @@ fn main() {
                 .index(1),
         )
         .get_matches();
+    let env = Arc::new(RwLock::new(Environment::root()));
 
-    match thread::Builder::new()
-        .name("runtime".to_string())
-        .stack_size(64 * 1024 * 1024)
-        .spawn(move || {
-            let env = Arc::new(RwLock::new(Environment::root()));
-
-            if !matches.is_present("NO_PRELUDE") {
-                match parse("(import \"@prelude\")", "<builtin>") {
-                    Ok(expressions) => {
-                        for expression in expressions {
-                            let snapshot = CallSnapshot::root(&expression);
-                            match expression.eval(snapshot, env.clone()) {
-                                Ok(_) => {}
-                                Err(err) => eprintln!("{}", err),
-                            }
-                        }
+    if !matches.is_present("NO_PRELUDE") {
+        match parse("(import \"@prelude\")", "<builtin>") {
+            Ok(expressions) => {
+                for expression in expressions {
+                    let snapshot = CallSnapshot::root(&expression);
+                    match expression.eval(snapshot, env.clone()) {
+                        Ok(_) => {}
+                        Err(err) => eprintln!("{}", err),
                     }
-                    Err(err) => eprintln!("{}", err),
-                };
+                }
             }
-            let file = matches.value_of("FILE");
-            match file {
-                Some(location) => match fs::read_to_string(location) {
-                    Ok(code) => {
-                        let exp_parsed = match parse(&code, location) {
-                            Ok(val) => val,
-                            Err(err) => {
-                                eprintln!("{}", err);
-                                std::process::exit(2);
-                            }
-                        };
-                        for val in exp_parsed {
-                            match val.eval(CallSnapshot::root(&val), env.clone()) {
-                                Ok(_) => {}
-                                Err(err) => {
-                                    eprintln!("{}", err);
-                                    std::process::exit(3);
-                                }
-                            }
-                        }
-                        if matches.is_present("INTERACTIVE") {
-                            repl::spawn(env);
-                        }
-                    }
+            Err(err) => eprintln!("{}", err),
+        };
+    }
+    let file = matches.value_of("FILE");
+    match file {
+        Some(location) => match fs::read_to_string(location) {
+            Ok(code) => {
+                let exp_parsed = match parse(&code, location) {
+                    Ok(val) => val,
                     Err(err) => {
-                        eprintln!("Unable to read file: {}", err);
-                        std::process::exit(1);
+                        eprintln!("{}", err);
+                        std::process::exit(2);
                     }
-                },
-                None => repl::spawn(env),
+                };
+                for val in exp_parsed {
+                    match val.eval(CallSnapshot::root(&val), env.clone()) {
+                        Ok(_) => {}
+                        Err(err) => {
+                            eprintln!("{}", err);
+                            std::process::exit(3);
+                        }
+                    }
+                }
+                if matches.is_present("INTERACTIVE") {
+                    repl::spawn(env);
+                }
             }
-        }) {
-        Ok(val) => val.join().expect("unable to follow turtle execution"),
-        Err(err) => eprintln!("{}", err),
-    };
+            Err(err) => {
+                eprintln!("Unable to read file: {}", err);
+                std::process::exit(1);
+            }
+        },
+        None => repl::spawn(env),
+    }
 }

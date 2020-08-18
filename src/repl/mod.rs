@@ -108,10 +108,10 @@ pub fn spawn(env: Arc<RwLock<Environment>>) {
             Ok(line) => {
                 rl.add_history_entry(line.as_str());
                 match parse(line.as_str(), "<stdin>") {
-                    Ok(mut values) => {
-                        for value in &mut values {
+                    Ok(values) => {
+                        for value in values {
                             let snapshot = CallSnapshot::root(&value.clone());
-                            match value.eval(snapshot, env.clone()) {
+                            match value.eval_async(snapshot, env.clone()).unwrap().recv().unwrap() {
                                 Ok(result) => println!(
                                     "   {} {}",
                                     Color::Blue.bold().paint("="),
