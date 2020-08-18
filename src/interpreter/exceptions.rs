@@ -110,9 +110,7 @@ impl ExceptionValue {
             Assignment(_, _) => {
                 Expression::new(Value::Keyword(Keyword::from_str("assignment-exp")))
             }
-            Concurrency => {
-                Expression::new(Value::Keyword(Keyword::from_str("concurrency-exp")))
-            }
+            Concurrency => Expression::new(Value::Keyword(Keyword::from_str("concurrency-exp"))),
         }
     }
 }

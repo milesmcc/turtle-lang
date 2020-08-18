@@ -1,7 +1,6 @@
 use std::fs;
 
 use std::sync::{Arc, RwLock};
-use std::thread;
 
 extern crate ansi_term;
 extern crate pest;

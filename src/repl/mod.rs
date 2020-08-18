@@ -111,7 +111,12 @@ pub fn spawn(env: Arc<RwLock<Environment>>) {
                     Ok(values) => {
                         for value in values {
                             let snapshot = CallSnapshot::root(&value.clone());
-                            match value.eval_async(snapshot, env.clone()).unwrap().recv().unwrap() {
+                            match value
+                                .eval_async(snapshot, env.clone())
+                                .unwrap()
+                                .recv()
+                                .unwrap()
+                            {
                                 Ok(result) => println!(
                                     "   {} {}",
                                     Color::Blue.bold().paint("="),

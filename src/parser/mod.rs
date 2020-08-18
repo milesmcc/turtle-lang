@@ -1,6 +1,6 @@
 use crate::{
-    Exception, ExceptionValue as EV, Expression, Keyword, Operator, Source,
-    SourcePosition, Symbol, Value,
+    Exception, ExceptionValue as EV, Expression, Keyword, Operator, Source, SourcePosition, Symbol,
+    Value,
 };
 use pest::iterators::Pair;
 use pest::Parser;
@@ -10,10 +10,7 @@ use std::sync::{Arc, RwLock};
 #[grammar = "parser/syntax.pest"]
 pub struct SyntaxParser;
 
-pub fn parse(
-    code: &str,
-    location: &str,
-) -> Result<Vec<Expression>, Exception> {
+pub fn parse(code: &str, location: &str) -> Result<Vec<Expression>, Exception> {
     let source = Arc::new(RwLock::new(Source::new(
         String::from(code),
         String::from(location),
@@ -58,15 +55,13 @@ fn build_expression(
             }
             Ok(Expression::new(Value::List(values)))
         }
-        Rule::symbol => Ok(Expression::new(
-            Value::Symbol(Symbol::new(String::from(pair.as_str()))),
-        )
+        Rule::symbol => Ok(Expression::new(Value::Symbol(Symbol::new(String::from(
+            pair.as_str(),
+        ))))
         .with_source(pos)),
-        Rule::keyword => Ok(Expression::new(
-            Value::Keyword(Keyword::new(String::from(
-                pair.into_inner().next().unwrap().as_str(),
-            ))),
-        )
+        Rule::keyword => Ok(Expression::new(Value::Keyword(Keyword::new(String::from(
+            pair.into_inner().next().unwrap().as_str(),
+        ))))
         .with_source(pos)),
         Rule::number => match pair.as_str().parse::<f64>() {
             Ok(num) => Ok(Expression::new(Value::Number(num)).with_source(pos)),
@@ -84,19 +79,17 @@ fn build_expression(
                 Some(format!("`{}` is not a valid byte (0-255)", pair.as_str())),
             )),
         },
-        Rule::text => Ok(Expression::new(
-            Value::Text(pair.into_inner().as_str().to_string()),
-        )),
+        Rule::text => Ok(Expression::new(Value::Text(
+            pair.into_inner().as_str().to_string(),
+        ))),
 
         // Sugar
         Rule::quote | Rule::eval => {
-            let mut elements = vec![Expression::new(
-                Value::Operator(match &pair.as_rule() {
-                    Rule::quote => Operator::Quote,
-                    Rule::eval => Operator::Eval,
-                    _ => unreachable!(),
-                }),
-            )];
+            let mut elements = vec![Expression::new(Value::Operator(match &pair.as_rule() {
+                Rule::quote => Operator::Quote,
+                Rule::eval => Operator::Eval,
+                _ => unreachable!(),
+            }))];
             for elem in pair.into_inner() {
                 elements.push(
                     build_expression(elem.clone(), source.clone())?

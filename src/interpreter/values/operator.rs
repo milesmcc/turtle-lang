@@ -75,12 +75,7 @@ impl Operator {
                     EV::ArgumentMismatch(arguments.len(), "1".to_string()),
                     snapshot
                 );
-                match arguments
-                    .get(0)
-                    .unwrap()
-                    .eval(snapshot, env)?
-                    .into_value()
-                {
+                match arguments.get(0).unwrap().eval(snapshot, env)?.into_value() {
                     Value::List(_) => Ok(Expression::new(Value::List(vec![]))),
                     _ => Ok(Expression::new(Value::True)),
                 }
@@ -217,9 +212,7 @@ impl Operator {
                     EV::ArgumentMismatch(arguments.len(), "2".to_string()),
                     snap()
                 );
-                let sym_exp = arguments
-                    .get(0).unwrap()
-                    .eval(snap(), env.clone())?;
+                let sym_exp = arguments.get(0).unwrap().eval(snap(), env.clone())?;
                 let symbol = match sym_exp.into_value() {
                     Symbol(sym) => sym,
                     other => exp!(
@@ -573,10 +566,8 @@ impl Operator {
                     format!("`{}` has {} placeholders, so {} total arguments are necessary (including the first string literal)", literal, interpolations.len(), interpolations.len() + 1)
                 );
                 for i in 1..arguments.len() {
-                    let replace_with = format!(
-                        "{}",
-                        arguments.get(i).unwrap().eval(snap(), env.clone())?
-                    );
+                    let replace_with =
+                        format!("{}", arguments.get(i).unwrap().eval(snap(), env.clone())?);
                     literal = String::from(placeholder.replace(&literal, replace_with.as_str()));
                 }
                 Ok(Expression::new(Value::Text(literal)))
@@ -618,12 +609,7 @@ impl Operator {
                     EV::ArgumentMismatch(arguments.len(), "1".to_string()),
                     snapshot
                 );
-                match arguments
-                    .get(0)
-                    .unwrap()
-                    .eval(snap(), env)?
-                    .into_value()
-                {
+                match arguments.get(0).unwrap().eval(snap(), env)?.into_value() {
                     Value::List(vals) => Ok(Expression::new(Value::Number(vals.len() as f64))),
                     other => exp!(
                         EV::InvalidArgument,
@@ -645,7 +631,14 @@ impl Operator {
                 for argument in arguments {
                     match argument.eval(snap(), env.clone())?.into_value() {
                         Value::List(values) => new_list.extend(values),
-                        other => exp!(EV::InvalidArgument, snapshot, format!("append requires all its arguments to be a list (got `{}`)", other))
+                        other => exp!(
+                            EV::InvalidArgument,
+                            snapshot,
+                            format!(
+                                "append requires all its arguments to be a list (got `{}`)",
+                                other
+                            )
+                        ),
                     }
                 }
                 Ok(Expression::new(Value::List(new_list)))

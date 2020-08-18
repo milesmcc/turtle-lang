@@ -1,6 +1,6 @@
-use crate::{Expression};
+use crate::Expression;
 
-use std::{fmt};
+use std::fmt;
 
 pub mod operator;
 pub use operator::Operator;

@@ -4,8 +4,7 @@ use std::fmt;
 use std::sync::{Arc, RwLock};
 
 use crate::{
-    exp, CallSnapshot, Exception, ExceptionValue as EV, Expression, Operator, Symbol,
-    Value,
+    exp, CallSnapshot, Exception, ExceptionValue as EV, Expression, Operator, Symbol, Value,
 };
 
 #[derive(Debug)]

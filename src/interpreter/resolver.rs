@@ -1,4 +1,6 @@
-use crate::{exp, parse, stdlib, CallSnapshot, Exception, ExceptionValue as EV, Expression, Environment};
+use crate::{
+    exp, parse, stdlib, CallSnapshot, Environment, Exception, ExceptionValue as EV, Expression,
+};
 use relative_path::RelativePath;
 use std::env;
 use std::fs;
@@ -9,7 +11,7 @@ pub fn resolve_resource(
     path: &str,
     snapshot: Arc<RwLock<CallSnapshot>>,
     via: &Expression,
-    env: Arc<RwLock<Environment>>
+    env: Arc<RwLock<Environment>>,
 ) -> Result<Expression, Exception> {
     let content = match path.starts_with('@') {
         true => match stdlib::get_std_resource(path) {

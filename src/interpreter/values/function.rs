@@ -1,6 +1,6 @@
 use crate::{Environment, Expression, Symbol};
-use std::sync::{Arc, RwLock};
 use std::cmp::Ordering;
+use std::sync::{Arc, RwLock};
 
 #[derive(Debug, Clone)]
 pub struct Function {
