@@ -172,6 +172,8 @@
                 (* x 
                     (fac 
                         (- x 1)))))))
+(metafunc ++ (arg) (let arg (+ ,arg 1)))
+(metafunc -- (arg) (let arg (+ ,arg -1)))
 
 ;; Trignometry
 (let 'sinseries '
@@ -241,6 +243,11 @@
         ('t 
             (or 
                 (tail vals)))))
+(metafunc if (val todo) (cond (,val ,todo) ('t ())))
+(metafunc ? (val if else) (cond (,val ,if) ('t ,else)))
+
+;; More list helpers
+(func in (list val) (gt 0 (length (filter (lambda '(k) '(eq k val)) list))))
 
 ;; Fun
 (setq zen "The Zen of Turtle (to be written...)")
