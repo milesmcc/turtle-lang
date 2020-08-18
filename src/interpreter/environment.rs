@@ -18,6 +18,9 @@ pub struct Environment {
     values: HashMap<Symbol, Arc<RwLock<Expression>>>,
     // This unreadable memory model might cause issues going forward
     parents: Vec<ParentEnvironment>,
+    // Whether this environment is a "shadow environment" -- that is, whether
+    // it defers local assignment to the first non-namespaced parent.
+    shadow: bool,
 }
 
 impl Environment {
@@ -27,7 +30,13 @@ impl Environment {
         Self {
             values: HashMap::new(),
             parents: vec![],
+            shadow: false,
         }
+    }
+
+    pub fn shadow(mut self) -> Self {
+        self.shadow = true;
+        self
     }
 
     pub fn with_parent(mut self, parent: Arc<RwLock<Self>>, namespace: Option<String>) -> Self {
@@ -170,7 +179,9 @@ impl Environment {
             )
         }
 
-        if only_local || self.values.contains_key(&identifier) || self.parents.is_empty() {
+        if !self.shadow
+            && (only_local || self.values.contains_key(&identifier) || self.parents.is_empty())
+        {
             let lock = Arc::new(RwLock::new(exp));
             self.values.insert(identifier, lock.clone());
             Ok(lock)

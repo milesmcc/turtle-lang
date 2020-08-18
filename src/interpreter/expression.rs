@@ -116,8 +116,17 @@ impl Expression {
                             Expression::new(Value::List(new_list)).eval(snap(), env)
                         }
                         Lambda(function) | Macro(function) => {
-                            let scoped_env = Environment::root()
-                                .with_parent(function.lexical_scope.clone(), None);
+                            let scoped_env = match &operator.value {
+                                Lambda(_) => Environment::root()
+                                    .with_parent(function.lexical_scope.clone(), None),
+                                Macro(_) => {
+                                    let mut env =
+                                        Environment::root().shadow().with_parent(env.clone(), None);
+                                    env.add_parent(function.lexical_scope.clone(), None);
+                                    env
+                                }
+                                _ => unreachable!(),
+                            };
                             let scoped_env_lock = Arc::new(RwLock::new(scoped_env));
 
                             if function.collapse_input {
