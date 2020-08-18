@@ -7,31 +7,10 @@
 ;; By considering the terms in the Fibonacci sequence whose values do not exceed four million, find the sum of the even-valued terms.
 
 (import "@prelude")
+(import "@math" :math)
 
 (let 'p2 0)
 (let 'p1 1)
-
-(func fib 
-    (n) 
-    (cond 
-        (
-            (eq n 0) '
-            (0)) 
-        (
-            (eq n 1) '
-            (0 1)) 
-        ('t 
-            (do 
-                (letq sequence 
-                    (fib 
-                        (+ n -1))) 
-                (append sequence 
-                    (list 
-                        (+ 
-                            (nth 
-                                (+ n -2) sequence) 
-                            (nth 
-                                (+ n -1) sequence))))))))
 
 (let 'answer ,
     (append '
@@ -41,6 +20,6 @@
                 (k) '
                 (eq 
                     (modulo k 2) 0)) 
-            (fib 33))))
+            (math::fibonacci 33))))
 (assert 
     (eq answer 4613732))
