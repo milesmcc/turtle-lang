@@ -79,6 +79,7 @@ impl Environment {
             "parse" => Some(Value::Operator(Parse)),
             "length" => Some(Value::Operator(Length)),
             "append" => Some(Value::Operator(Append)),
+            "do" => Some(Value::Operator(Do)),
             _ => None,
         }
     }

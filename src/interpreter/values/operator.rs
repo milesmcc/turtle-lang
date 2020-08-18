@@ -37,6 +37,7 @@ pub enum Operator {
     Parse,
     Length,
     Append,
+    Do,
 }
 
 impl fmt::Display for Operator {
@@ -642,6 +643,19 @@ impl Operator {
                     }
                 }
                 Ok(Expression::new(Value::List(new_list)))
+            }
+            Do => {
+                exp_assert!(
+                    arguments.len() >= 1,
+                    EV::ArgumentMismatch(arguments.len(), "1+".to_string()),
+                    snapshot
+                );
+
+                let mut result = Expression::nil();
+                for argument in arguments {
+                    result = argument.eval(snap(), env.clone())?;
+                }
+                Ok(result)
             }
         }
     }

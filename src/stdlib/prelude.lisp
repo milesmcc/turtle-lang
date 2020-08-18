@@ -112,12 +112,6 @@
                 (tail 
                     (tail args))))))
 
-;; Operation shorthand
-(metafunc do something ,
-    (cons lambda 
-        (cons 
-            () something)))
-
 ;; Assertion and testing
 (func assert 
     (expr) 
