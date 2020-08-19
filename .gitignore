@@ -12,3 +12,5 @@ Cargo.lock
 .turtle_history.txt
 
 .vscode/
+
+perf.data*

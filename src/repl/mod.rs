@@ -100,7 +100,7 @@ pub fn spawn(env: Arc<RwLock<Environment>>) {
     }
 
     loop {
-        let p = format!("🐢 > ");
+        let p = "🐢 > ".to_string();
         rl.helper_mut().expect("No helper").colored_prompt =
             Color::Green.bold().paint(&p).to_string();
         let line = rl.readline(&p);

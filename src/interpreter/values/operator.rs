@@ -107,7 +107,7 @@ impl Operator {
                         },
                     }
                 }
-                return Ok(Expression::t());
+                Ok(Expression::t())
             }
             Car => {
                 exp_assert!(
@@ -121,10 +121,10 @@ impl Operator {
                 match list.into_value() {
                     Value::List(mut vals) => {
                         exp_assert!(
-                            vals.len() > 0,
+                            !vals.is_empty(),
                             EV::InvalidArgument,
                             snap(),
-                            format!("cannot `car` an empty list (nil)")
+                            "cannot `car` an empty list (nil)".to_string()
                         );
                         Ok(vals.remove(0))
                     }
@@ -163,7 +163,7 @@ impl Operator {
                     snap()
                 );
                 let first = arguments.get(0).unwrap().eval(snap(), env.clone())?;
-                let list = arguments.get(1).unwrap().eval(snap(), env.clone())?;
+                let list = arguments.get(1).unwrap().eval(snap(), env)?;
                 match list.into_value() {
                     Value::List(mut vals) => {
                         vals.insert(0, first);
@@ -230,10 +230,7 @@ impl Operator {
                 env.write().unwrap().assign(
                     symbol,
                     assigned_expr.clone(),
-                    match self {
-                        Export => false,
-                        _ => true,
-                    },
+                    !matches!(self, Export),
                     snap(),
                 )?;
                 Ok(assigned_expr)
@@ -280,7 +277,7 @@ impl Operator {
                 let exp = arguments
                     .get(1)
                     .unwrap()
-                    .eval(snap(), env.clone())?
+                    .eval(snap(), env)?
                     .into_value();
                 match (base, exp) {
                     (Number(base), Number(exp)) => {
@@ -310,7 +307,7 @@ impl Operator {
                 let modu = arguments
                     .get(1)
                     .unwrap()
-                    .eval(snap(), env.clone())?
+                    .eval(snap(), env)?
                     .into_value();
                 match (val, modu) {
                     (Number(first), Number(second)) => {
@@ -425,7 +422,7 @@ impl Operator {
                     .get(0)
                     .unwrap()
                     .eval(snap(), env.clone())?
-                    .eval(snap(), env.clone())
+                    .eval(snap(), env)
             }
             While => {
                 exp_assert!(
@@ -545,7 +542,7 @@ impl Operator {
             }
             Format => {
                 exp_assert!(
-                    arguments.len() >= 1,
+                    !arguments.is_empty(),
                     EV::ArgumentMismatch(arguments.len(), "1+".to_string()),
                     snapshot
                 );
@@ -582,7 +579,7 @@ impl Operator {
                 let value_str = match arguments
                     .get(0)
                     .unwrap()
-                    .eval(snap(), env.clone())?
+                    .eval(snap(), env)?
                     .into_value()
                 {
                     Text(value) => value,
@@ -624,7 +621,7 @@ impl Operator {
             }
             Append => {
                 exp_assert!(
-                    arguments.len() >= 1,
+                    !arguments.is_empty(),
                     EV::ArgumentMismatch(arguments.len(), "1+".to_string()),
                     snapshot
                 );
@@ -646,7 +643,7 @@ impl Operator {
             }
             Do => {
                 exp_assert!(
-                    arguments.len() >= 1,
+                    !arguments.is_empty(),
                     EV::ArgumentMismatch(arguments.len(), "1+".to_string()),
                     snapshot
                 );

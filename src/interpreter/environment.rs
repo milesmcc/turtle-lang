@@ -95,7 +95,7 @@ impl Environment {
             }
         } else {
             for parent in &self.parents {
-                if &namespace == &parent.namespace {
+                if namespace == parent.namespace {
                     return parent
                         .environment
                         .read()
@@ -188,7 +188,7 @@ impl Environment {
             Ok(lock)
         } else {
             for parent in &self.parents {
-                if &parent.namespace == &namespace {
+                if parent.namespace == namespace {
                     return parent
                         .environment
                         .write()

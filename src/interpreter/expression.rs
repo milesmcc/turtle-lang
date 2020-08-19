@@ -65,16 +65,17 @@ impl Expression {
         parent_snapshot: Arc<RwLock<CallSnapshot>>,
         env: Arc<RwLock<Environment>>,
     ) -> Result<mpsc::Receiver<Result<Self, Exception>>, Exception> {
-        let exp = self.clone();
+        let exp = self;
         let snap = parent_snapshot.clone();
         // TODO: do this without clone
         let (sender, receiver) = mpsc::channel::<Result<Self, Exception>>();
-        match thread::Builder::new()
+        if let Ok(th) = thread::Builder::new()
             .stack_size(64 * 1024 * 1024)
             .spawn(move || {
                 sender.send(exp.eval(snap, env)).unwrap();
-            }) {
-            Ok(th) => match th.join() {
+            })
+        {
+            match th.join() {
                 Ok(_) => {}
                 Err(_) => {
                     return Err(Exception::new(
@@ -83,8 +84,7 @@ impl Expression {
                         Some("could not wait for thread to finish executing".to_string()),
                     ))
                 }
-            },
-            Err(_) => {}
+            }
         };
         Ok(receiver)
     }
@@ -163,11 +163,8 @@ impl Expression {
                                     scoped_env.assign(symbol.clone(), arg_evaled, true, snap())?;
                                 }
                             }
-                            match &operator.value {
-                                Macro { .. } => {
-                                    scoped_env = scoped_env.shadow();
-                                }
-                                _ => {}
+                            if let Macro { .. } = &operator.value {
+                                scoped_env = scoped_env.shadow();
                             };
                             let mut result = Expression::nil();
                             let scoped_env_lock = Arc::new(RwLock::new(scoped_env));
