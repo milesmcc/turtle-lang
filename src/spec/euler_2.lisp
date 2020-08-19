@@ -13,13 +13,11 @@
 (let 'p1 1)
 
 (let 'answer ,
-    (append '
-        (sum) 
+    (append
+        '(sum) 
         (filter 
-            (lambda '
-                (k) '
-                (eq 
-                    (modulo k 2) 0)) 
+            (lambda '(k) '(eq (modulo k 2) 0)) 
             (math::fibonacci 33))))
+
 (assert 
     (eq answer 4613732))

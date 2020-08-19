@@ -9,6 +9,9 @@
 (let 'i 0)
 (let 'sum 0)
 
-(while (gt i 1000) (do (if (in (list (modulo i 3) (modulo i 5)) 0) (let 'sum (+ sum i))) (++ i)))
+(while (gt i 1000) 
+    (do (if (in (list (modulo i 3) (modulo i 5)) 0)
+            (let 'sum (+ sum i)))
+        (++ i)))
 
 (assert (eq sum 233168))
