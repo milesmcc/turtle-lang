@@ -194,7 +194,7 @@
         (
             (head vals) 't) 
         ('t 
-            (or 
+            ,(cons or 
                 (tail vals)))))
 (metafunc if (val todo) (cond (,val ,todo) ('t ())))
 (metafunc ? (val if else) (cond (,val ,if) ('t ,else)))
