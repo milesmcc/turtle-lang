@@ -83,7 +83,13 @@ fn main() {
                     }
                 };
                 for val in exp_parsed {
-                    match val.clone().eval_async(CallSnapshot::root(&val), env.clone()).unwrap().recv().unwrap() {
+                    match val
+                        .clone()
+                        .eval_async(CallSnapshot::root(&val), env.clone())
+                        .unwrap()
+                        .recv()
+                        .unwrap()
+                    {
                         Ok(_) => {}
                         Err(err) => {
                             eprintln!("{}", err);
