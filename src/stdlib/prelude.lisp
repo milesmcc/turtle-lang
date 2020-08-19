@@ -166,8 +166,14 @@
                 (* x 
                     (fac 
                         (- x 1)))))))
-(metafunc ++ (arg) (let arg (+ ,arg 1)))
-(metafunc -- (arg) (let arg (+ ,arg -1)))
+(metafunc ++ 
+    (arg) 
+    (let arg 
+        (+ ,arg 1)))
+(metafunc -- 
+    (arg) 
+    (let arg 
+        (+ ,arg -1)))
 
 ;; Boolean operators
 (func not 
@@ -194,14 +200,51 @@
         (
             (head vals) 't) 
         ('t 
-            ,(cons or 
+,
+            (cons or 
                 (tail vals)))))
-(metafunc if (val todo) (cond (,val ,todo) ('t ())))
-(metafunc ? (val if else) (cond (,val ,if) ('t ,else)))
+(metafunc if 
+    (val todo) 
+    (cond 
+        (,val ,todo) 
+        ('t 
+            ())))
+(metafunc ? 
+    (val if else) 
+    (cond 
+        (,val ,if) 
+        ('t ,else)))
 
 ;; More list helpers
-(func in (list val) (gt 0 (length (filter (lambda '(k) '(eq k val)) list))))
-(func map (function args) (cond ((eq args ()) ()) ('t (cons (function (first args)) (map function (tail args))))))
+(func in 
+    (lst val) 
+    (gt 0 
+        (length 
+            (filter 
+                (lambda '
+                    (k) '
+                    (eq k val)) lst))))
+(func map 
+    (function args) 
+    (cond 
+        (
+            (eq args 
+                ()) 
+            ()) 
+        ('t 
+            (cons 
+                (function 
+                    (first args)) 
+                (map function 
+                    (tail args))))))
+(func push 
+    (lst val) 
+    (append lst 
+        (list val)))
+(metafunc push! 
+    (lst val) 
+    (let lst 
+        (push ,lst ,val)))
 
 ;; Fun
 (setq zen "The Zen of Turtle (to be written...)")
