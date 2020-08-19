@@ -73,7 +73,7 @@ impl ExceptionValue {
                 "`{}` is not a valid list operator (did you mean to quote this list?)",
                 value
             ),
-            StackOverflow => "the call stack exceeded the limit (500)".to_string(),
+            StackOverflow => "the call stack exceeded the limit (1000)".to_string(),
             Assignment(sym, exp) => format!("could not assign `{}` to `{}`", sym, exp),
             Concurrency => {
                 "something went wrong when evaluating this expression concurrently".to_string()

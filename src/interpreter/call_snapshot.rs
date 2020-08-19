@@ -29,7 +29,7 @@ impl CallSnapshot {
             .expect("could not access call snapshot parent (are threads locked?)")
             .depth
             + 1;
-        if depth > 500 {
+        if depth > 1000 {
             exp!(
                 EV::StackOverflow,
                 parent,
