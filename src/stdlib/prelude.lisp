@@ -201,6 +201,7 @@
 
 ;; More list helpers
 (func in (list val) (gt 0 (length (filter (lambda '(k) '(eq k val)) list))))
+(func map (function args) (cond ((eq args ()) ()) ('t (cons (function (first args)) (map function (tail args))))))
 
 ;; Fun
 (setq zen "The Zen of Turtle (to be written...)")
