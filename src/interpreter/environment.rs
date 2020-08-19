@@ -15,9 +15,9 @@ struct ParentEnvironment {
 
 #[derive(Debug)]
 pub struct Environment {
-    values: HashMap<Symbol, Arc<RwLock<Expression>>>,
+    values: RwLock<HashMap<Symbol, Arc<RwLock<Expression>>>>,
     // This unreadable memory model might cause issues going forward
-    parents: Vec<ParentEnvironment>,
+    parents: RwLock<Vec<ParentEnvironment>>,
     // Whether this environment is a "shadow environment" -- that is, whether
     // it defers local assignment to the first non-namespaced parent.
     shadow: bool,
@@ -28,8 +28,8 @@ impl Environment {
 
     pub fn root() -> Self {
         Self {
-            values: HashMap::new(),
-            parents: vec![],
+            values: RwLock::new(HashMap::new()),
+            parents: RwLock::new(vec![]),
             shadow: false,
         }
     }
@@ -39,7 +39,7 @@ impl Environment {
         self
     }
 
-    pub fn with_parent(mut self, parent: Arc<RwLock<Self>>, namespace: Option<String>) -> Self {
+    pub fn with_parent(self, parent: Arc<RwLock<Self>>, namespace: Option<String>) -> Self {
         self.add_parent(parent, namespace);
         self
     }
@@ -93,11 +93,11 @@ impl Environment {
         namespace: Option<String>,
     ) -> Option<(Arc<RwLock<Expression>>, usize)> {
         if namespace == None {
-            if let Some(value) = self.values.get(&symbol) {
+            if let Some(value) = self.values.read().unwrap().get(&symbol) {
                 return Some((value.clone(), 0));
             }
         } else {
-            for parent in &self.parents {
+            for parent in self.parents.read().unwrap().iter() {
                 if namespace == parent.namespace {
                     return parent
                         .environment
@@ -108,7 +108,7 @@ impl Environment {
             }
         }
         let mut best_match: (Option<Arc<RwLock<Expression>>>, usize) = (None, 0);
-        for parent in &self.parents {
+        for parent in self.parents.read().unwrap().iter() {
             if parent.namespace.is_some() {
                 continue;
             }
@@ -159,15 +159,15 @@ impl Environment {
         }
     }
 
-    pub fn add_parent(&mut self, parent: Arc<RwLock<Self>>, namespace: Option<String>) {
-        self.parents.push(ParentEnvironment {
+    pub fn add_parent(&self, parent: Arc<RwLock<Self>>, namespace: Option<String>) {
+        self.parents.write().unwrap().push(ParentEnvironment {
             namespace,
             environment: parent,
         });
     }
 
     pub fn assign(
-        &mut self,
+        &self,
         symbol: Symbol,
         exp: Expression,
         only_local: bool,
@@ -184,13 +184,18 @@ impl Environment {
         }
 
         if !self.shadow
-            && (only_local || self.values.contains_key(&identifier) || self.parents.is_empty())
+            && (only_local
+                || self.values.read().unwrap().contains_key(&identifier)
+                || self.parents.read().unwrap().is_empty())
         {
             let lock = Arc::new(RwLock::new(exp));
-            self.values.insert(identifier, lock.clone());
+            self.values
+                .write()
+                .unwrap()
+                .insert(identifier, lock.clone());
             Ok(lock)
         } else {
-            for parent in &self.parents {
+            for parent in self.parents.read().unwrap().iter() {
                 if parent.namespace == namespace {
                     return parent
                         .environment
@@ -212,13 +217,17 @@ impl fmt::Display for Environment {
         write!(
             f,
             "[values: {}]\n{}\nimported namespaces: {}",
-            self.values.len(),
+            self.values.read().unwrap().len(),
             self.values
+                .read()
+                .unwrap()
                 .iter()
                 .map(|(k, v)| format!("{} := {}", k, v.read().unwrap()))
                 .collect::<Vec<String>>()
                 .join("\n"),
             self.parents
+                .read()
+                .unwrap()
                 .iter()
                 .map(|p| match &p.namespace {
                     Some(val) => val.clone(),

@@ -120,7 +120,7 @@ impl Expression {
                                 Lambda(_) => Environment::root()
                                     .with_parent(function.lexical_scope.clone(), None),
                                 Macro(_) => {
-                                    let mut env =
+                                    let env =
                                         Environment::root().with_parent(env.clone(), None);
                                     env.add_parent(function.lexical_scope.clone(), None);
                                     env
