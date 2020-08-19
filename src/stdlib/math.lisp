@@ -118,25 +118,15 @@
 (func prime-factorization 
     (n) 
     (do 
-        (letq factors 
-            ()) 
-        (letq cur n) 
+        (letq factors ()) 
+        (letq curr n) 
         (while 
-            (not 
-                (is-prime cur)) 
-            (do 
-                (letq trying 2) 
-                (letq tried 
-                    ()) 
-                (? 
-                    (eq 
-                        (modulo cur trying) 0) 
-                    (do 
-                        (push! factors trying) 
-                        (letq cur 
-                            (/ cur trying))) 
-                    (do 
-                        (push! tried trying) 
-                        (letq trying 
-                            (next-prime tried))))))
+            (not (eq ,(append '(prod) factors) n))
+            (do
+                (let 'trying 2)
+                (while
+                    (not (eq (modulo curr trying) 0))
+                    (++ trying))
+                (push! factors trying)
+                (let 'curr (/ curr trying))))
      factors))
