@@ -38,6 +38,8 @@ pub enum Operator {
     Length,
     Append,
     Do,
+    Floor,
+    Rand
 }
 
 impl fmt::Display for Operator {
@@ -274,11 +276,7 @@ impl Operator {
                     .unwrap()
                     .eval(snap(), env.clone())?
                     .into_value();
-                let exp = arguments
-                    .get(1)
-                    .unwrap()
-                    .eval(snap(), env)?
-                    .into_value();
+                let exp = arguments.get(1).unwrap().eval(snap(), env)?.into_value();
                 match (base, exp) {
                     (Number(base), Number(exp)) => {
                         Ok(Expression::new(Value::Number(base.powf(exp))))
@@ -304,11 +302,7 @@ impl Operator {
                     .unwrap()
                     .eval(snap(), env.clone())?
                     .into_value();
-                let modu = arguments
-                    .get(1)
-                    .unwrap()
-                    .eval(snap(), env)?
-                    .into_value();
+                let modu = arguments.get(1).unwrap().eval(snap(), env)?.into_value();
                 match (val, modu) {
                     (Number(first), Number(second)) => {
                         Ok(Expression::new(Value::Number(first % second)))
@@ -576,12 +570,7 @@ impl Operator {
                     EV::ArgumentMismatch(arguments.len(), "1".to_string()),
                     snapshot
                 );
-                let value_str = match arguments
-                    .get(0)
-                    .unwrap()
-                    .eval(snap(), env)?
-                    .into_value()
-                {
+                let value_str = match arguments.get(0).unwrap().eval(snap(), env)?.into_value() {
                     Text(value) => value,
                     other => exp!(
                         EV::InvalidArgument,
@@ -654,6 +643,34 @@ impl Operator {
                 }
                 Ok(result)
             }
+            Floor => {
+                exp_assert!(
+                    arguments.len() == 1,
+                    EV::ArgumentMismatch(arguments.len(), "1".to_string()),
+                    snapshot
+                );
+                match arguments
+                    .get(0)
+                    .unwrap()
+                    .eval(snap(), env.clone())?
+                    .into_value()
+                {
+                    Number(val) => Ok(Expression::new(Value::Number(val.floor()))),
+                    val => exp!(
+                        EV::InvalidArgument,
+                        snap(),
+                        format!("`floor` expects a number as its argument (got `{}`)", val)
+                    ),
+                }
+            },
+            Rand => {
+                exp_assert!(
+                    arguments.len() == 0,
+                    EV::ArgumentMismatch(arguments.len(), "0".to_string()),
+                    snapshot
+                );
+                Ok(Expression::new(Value::Number(rand::random())))
+            },
         }
     }
 }

@@ -11,6 +11,7 @@ extern crate pest_derive;
 extern crate clap;
 extern crate regex;
 extern crate relative_path;
+extern crate rand;
 
 pub mod interpreter;
 pub mod parser;

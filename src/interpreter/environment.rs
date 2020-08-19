@@ -80,6 +80,8 @@ impl Environment {
             "length" => Some(Value::Operator(Length)),
             "append" => Some(Value::Operator(Append)),
             "do" => Some(Value::Operator(Do)),
+            "floor" => Some(Value::Operator(Floor)),
+            "rand" => Some(Value::Operator(Rand)),
             _ => None,
         }
     }

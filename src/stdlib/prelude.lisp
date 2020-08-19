@@ -48,24 +48,23 @@
         (nth 
             (sum 
                 (length x) -1) x)))
-(export 'filter 
-    (lambda '
-        (criteria x) '
-        (cond 
-            (x 
-                (cond 
-                    (
-                        (criteria 
-                            (first x)) 
-                        (cons 
-                            (first x) 
-                            (filter criteria 
-                                (tail x)))) 
-                    ('t 
-                        (filter criteria 
-                            (tail x))))) 
-            ('t 
-                ()))))
+(export 'filter
+    (lambda
+        '(criteria lst)
+        '(do
+            (let 'matches ())
+            (let 'n 0)
+            (while
+                (gt n (length lst))
+                (do
+                    (let 'val (nth n lst))
+                    (cond
+                        (
+                            (criteria val)
+                            (letq matches (append matches (list val))))
+                        ('t ()))
+                    (++ n)))
+            matches)))
 (export 'remove 
     (lambda '
         (n xs) '
@@ -200,7 +199,7 @@
         (
             (head vals) 't) 
         ('t 
-,
+         ,
             (cons or 
                 (tail vals)))))
 (metafunc if 
@@ -245,6 +244,25 @@
     (lst val) 
     (let lst 
         (push ,lst ,val)))
+(func sort (lst)
+    (cond
+        (,(append '(ge) lst) lst)
+        (
+            't
+            (do
+                (let 'pivot (nth (floor (* (rand) (length lst))) lst))
+                (let 'left (filter (lambda '(x) '(gt x pivot)) lst))
+                (let 'right (filter (lambda '(x) '(ge pivot x)) lst))
+                (append (sort left) (sort right))))))
+(func range (n)
+    (do
+        (let 'nums ())
+        (while
+            (gt 0 n)
+            (do
+                (let 'nums (cons n nums))
+                (-- n)))
+        nums))
 
 ;; Fun
 (setq zen "The Zen of Turtle (to be written...)")
