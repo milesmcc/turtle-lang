@@ -39,7 +39,8 @@ pub enum Operator {
     Append,
     Do,
     Floor,
-    Rand
+    Rand,
+    Equiv
 }
 
 impl fmt::Display for Operator {
@@ -670,6 +671,20 @@ impl Operator {
                     snapshot
                 );
                 Ok(Expression::new(Value::Number(rand::random())))
+            },
+            Equiv => {
+                exp_assert!(
+                    arguments.len() >= 2,
+                    EV::ArgumentMismatch(arguments.len(), "2+".to_string()),
+                    snapshot
+                );
+                let equals = arguments.get(0).unwrap().eval(snap(), env.clone())?;
+                for i in arguments.iter().skip(1) {
+                    if i.eval(snap(), env.clone())? != equals {
+                        return Ok(Expression::nil());
+                    }
+                }
+                return Ok(Expression::t());
             },
         }
     }

@@ -8,17 +8,5 @@
 (import "@math" :math)
 
 (let 'n 600851475143)
-(let 'factors ())
-(let 'curr n)
 
-(while 
-    (not (eq ,(append '(prod) factors) n))
-    (do
-        (let 'trying 2)
-        (while
-            (not (eq (modulo curr trying) 0))
-            (++ trying))
-        (push! factors trying)
-        (let 'curr (/ curr trying))))
-
-(assert (eq (last factors) 6857))
+(assert (eq (last (math::prime-factorization n)) 6857))
