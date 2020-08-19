@@ -63,3 +63,6 @@
                                 (+ n -2) sequence) 
                             (nth 
                                 (+ n -1) sequence))))))))
+
+;; Primes
+(func next-indivisible (nums) (do (let 'n (last nums)) (while ,(cons or (map (lambda '(divisor) '(eq (modulo n divisor) 0)) nums)) (++ n)) n))
