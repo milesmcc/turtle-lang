@@ -65,4 +65,78 @@
                                 (+ n -1) sequence))))))))
 
 ;; Primes
-(func next-indivisible (nums) (do (let 'n (last nums)) (while ,(cons or (map (lambda '(divisor) '(eq (modulo n divisor) 0)) nums)) (++ n)) n))
+(func next-prime 
+    (primes) 
+    (do 
+        (let 'n 
+            (last primes)) 
+        (while ,
+            (cons or 
+                (map 
+                    (lambda '
+                        (divisor) '
+                        (eq 
+                            (modulo n divisor) 0)) primes)) 
+            (++ n)) n))
+(func primes 
+    (n) 
+    (cond 
+        (
+            (eq 0 n) 
+            ()) 
+        (
+            (eq 1 n) '
+            (2)) 
+        ('t 
+            (do 
+                (let 'previous 
+                    (primes 
+                        (+ n -1))) 
+                (append previous 
+                    (list 
+                        (next-prime previous)))))))
+(func is-prime 
+    (n) 
+    (do 
+        (letq is-composite 
+            ()) 
+        (letq p 2) 
+        (letq tried 
+            ()) 
+        (while 
+            (and 
+                (not is-composite) 
+                (strictly-increasing p n)) 
+            (? 
+                (eq 
+                    (modulo n p) 0) 
+                (letq is-composite 't) 
+                (do 
+                    (push! tried p) 
+                    (letq p 
+                        (next-prime tried))))) (not is-composite)))
+(func prime-factorization 
+    (n) 
+    (do 
+        (letq factors 
+            ()) 
+        (letq cur n) 
+        (while 
+            (not 
+                (is-prime cur)) 
+            (do 
+                (letq trying 2) 
+                (letq tried 
+                    ()) 
+                (? 
+                    (eq 
+                        (modulo cur trying) 0) 
+                    (do 
+                        (push! factors trying) 
+                        (letq cur 
+                            (/ cur trying))) 
+                    (do 
+                        (push! tried trying) 
+                        (letq trying 
+                            (next-prime tried))))))
+     factors))

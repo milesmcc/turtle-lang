@@ -188,7 +188,7 @@
             (not vals) 't) 
         (
             (head vals) 
-            (and 
+            ,(cons and 
                 (tail vals))) 
         ('t 
             ())))
