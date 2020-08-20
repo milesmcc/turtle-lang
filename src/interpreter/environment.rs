@@ -101,7 +101,9 @@ impl Environment {
             for parent in self.parents.iter() {
                 if namespace == parent.namespace {
                     return parent
-                        .environment.read().unwrap()
+                        .environment
+                        .read()
+                        .unwrap()
                         .resolve_symbol(symbol, None);
                 }
             }
@@ -183,13 +185,10 @@ impl Environment {
         }
 
         if !self.shadow
-            && (only_local
-                || self.values.contains_key(&identifier)
-                || self.parents.is_empty())
+            && (only_local || self.values.contains_key(&identifier) || self.parents.is_empty())
         {
             let lock = Locker::new(exp);
-            self.values
-                .insert(identifier, lock.clone());
+            self.values.insert(identifier, lock.clone());
             Ok(lock)
         } else {
             for parent in self.parents.iter() {

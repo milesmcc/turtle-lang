@@ -2,7 +2,6 @@ use crate::{exp, Exception, ExceptionValue as EV, Expression, Locker};
 use ansi_term::Color;
 use std::fmt;
 
-
 #[derive(Debug, Clone)]
 pub struct CallSnapshot {
     parent: Option<Locker<Self>>,
@@ -19,10 +18,7 @@ impl CallSnapshot {
         })
     }
 
-    pub fn new(
-        exp: &Expression,
-        parent: &Locker<Self>,
-    ) -> Result<Locker<Self>, Exception> {
+    pub fn new(exp: &Expression, parent: &Locker<Self>) -> Result<Locker<Self>, Exception> {
         // TODO: make read lock check return an exception instead of panicking
         let depth = parent
             .read()

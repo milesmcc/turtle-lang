@@ -12,10 +12,7 @@ use crate::Locker;
 pub struct SyntaxParser;
 
 pub fn parse(code: &str, location: &str) -> Result<Vec<Expression>, Exception> {
-    let source = Locker::new(Source::new(
-        String::from(code),
-        String::from(location),
-    ));
+    let source = Locker::new(Source::new(String::from(code), String::from(location)));
 
     match SyntaxParser::parse(Rule::expressions, code) {
         Ok(pairs) => {
@@ -36,10 +33,7 @@ pub fn parse(code: &str, location: &str) -> Result<Vec<Expression>, Exception> {
     }
 }
 
-fn build_expression(
-    pair: Pair<'_, Rule>,
-    source: Locker<Source>,
-) -> Result<Expression, Exception> {
+fn build_expression(pair: Pair<'_, Rule>, source: Locker<Source>) -> Result<Expression, Exception> {
     let pos = SourcePosition::new(
         pair.as_span().start_pos().pos(),
         pair.as_span().end_pos().pos(),

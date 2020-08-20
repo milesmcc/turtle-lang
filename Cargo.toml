@@ -3,8 +3,17 @@ name = "turtle"
 version = "0.1.0"
 authors = ["R. Miles McCain <development-machine@sendmiles.email>"]
 edition = "2018"
+repository = "https://github.com/milesmcc/turtle"
+license = "MIT"
+description = "A humble and friendly Lisp built for the web"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[lib]
+name = "turtle"
+path = "src/lib.rs"
+
+[[bin]]
+name = "turtle-bin"
+path = "src/bin.rs"
 
 [dependencies]
 pest = "2"

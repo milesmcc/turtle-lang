@@ -41,7 +41,7 @@ pub enum Operator {
     Do,
     Floor,
     Rand,
-    Equiv
+    Equiv,
 }
 
 impl fmt::Display for Operator {
@@ -664,7 +664,7 @@ impl Operator {
                         format!("`floor` expects a number as its argument (got `{}`)", val)
                     ),
                 }
-            },
+            }
             Rand => {
                 exp_assert!(
                     arguments.len() == 0,
@@ -672,7 +672,7 @@ impl Operator {
                     snapshot
                 );
                 Ok(Expression::new(Value::Number(rand::random())))
-            },
+            }
             Equiv => {
                 exp_assert!(
                     arguments.len() >= 2,
@@ -686,7 +686,7 @@ impl Operator {
                     }
                 }
                 return Ok(Expression::t());
-            },
+            }
         }
     }
 }
