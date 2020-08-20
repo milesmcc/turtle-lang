@@ -1,18 +1,6 @@
+# The Turtle Programming Language
 
-<p align="center">
-  <h1 align="center">Turtle Lang</h1>
-  
-  <br>
-
-  <p align="center">
-    A humble, fun, and friendly Lisp
-    <br>
-    <strong><a href="#install">Install »</a></strong>
-  </p>
-  <p align="center"><a href="#examples">Examples</a> &bull; <a href="TUTORIAL.md">Tutorial</a></p>
-</p>
-
-<br>
+Turtle is a humble, fun, and friendly Lisp. You can [install it](#install) using Cargo, browse some [example code](#examples), or follow the (currently unwritten) [tutorial](TUTORIAL.md).
 
 ## Motivation
 
