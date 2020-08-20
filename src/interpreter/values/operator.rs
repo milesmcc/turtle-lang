@@ -4,7 +4,8 @@ use crate::{
 };
 use regex::Regex;
 use std::fmt;
-use std::sync::{Arc, RwLock};
+
+use crate::Locker;
 
 #[derive(Debug, Clone, PartialEq, PartialOrd)]
 pub enum Operator {
@@ -52,10 +53,10 @@ impl fmt::Display for Operator {
 impl Operator {
     pub fn apply(
         &self,
-        snapshot: Arc<RwLock<CallSnapshot>>,
+        snapshot: Locker<CallSnapshot>,
         arguments: Vec<&Expression>,
         expr: &Expression,
-        env: Arc<RwLock<Environment>>,
+        env: Locker<Environment>,
     ) -> Result<Expression, Exception> {
         use crate::Operator::*;
         use Value::*;
@@ -401,7 +402,7 @@ impl Operator {
                     None => None
                 };
 
-                let imported_env = Arc::new(RwLock::new(Environment::root()));
+                let imported_env = Locker::new(Environment::root());
                 let exp = resolve_resource(&path, snapshot, expr, imported_env.clone())?;
                 env.write().unwrap().add_parent(imported_env, namespace);
                 Ok(exp)
@@ -513,7 +514,7 @@ impl Operator {
                     Err(err) => {
                         // TODO: remove extra clone
                         match catch_func.get_value() {
-                            Value::Lambda{..} => Expression::new(Value::List(vec![catch_func.clone(), err.into_value().into_expression()])).eval(snapshot, Arc::new(RwLock::new(Environment::root().with_parent(env, None)))),
+                            Value::Lambda{..} => Expression::new(Value::List(vec![catch_func.clone(), err.into_value().into_expression()])).eval(snapshot, Locker::new(Environment::root().with_parent(env, None))),
                             _ => exp!(
                                 EV::InvalidArgument,
                                 snapshot,

@@ -9,7 +9,8 @@ use rustyline::Editor;
 use rustyline::{CompletionType, Config, Context};
 use rustyline_derive::Helper;
 use std::borrow::Cow::{self, Borrowed, Owned};
-use std::sync::{Arc, RwLock};
+
+use crate::Locker;
 
 use crate::{parse, CallSnapshot, Environment};
 
@@ -80,7 +81,7 @@ impl Validator for ReplHelper {
     }
 }
 
-pub fn spawn(env: Arc<RwLock<Environment>>) {
+pub fn spawn(env: Locker<Environment>) {
     let config = Config::builder()
         .history_ignore_space(true)
         .completion_type(CompletionType::List)

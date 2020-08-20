@@ -1,28 +1,28 @@
-use crate::{exp, Exception, ExceptionValue as EV, Expression};
+use crate::{exp, Exception, ExceptionValue as EV, Expression, Locker};
 use ansi_term::Color;
 use std::fmt;
-use std::sync::{Arc, RwLock};
+
 
 #[derive(Debug, Clone)]
 pub struct CallSnapshot {
-    parent: Option<Arc<RwLock<Self>>>,
+    parent: Option<Locker<Self>>,
     expression: Expression,
     depth: usize,
 }
 
 impl CallSnapshot {
-    pub fn root(exp: &Expression) -> Arc<RwLock<Self>> {
-        Arc::new(RwLock::new(CallSnapshot {
+    pub fn root(exp: &Expression) -> Locker<Self> {
+        Locker::new(CallSnapshot {
             parent: None,
             expression: exp.clone(),
             depth: 0,
-        }))
+        })
     }
 
     pub fn new(
         exp: &Expression,
-        parent: &Arc<RwLock<Self>>,
-    ) -> Result<Arc<RwLock<Self>>, Exception> {
+        parent: &Locker<Self>,
+    ) -> Result<Locker<Self>, Exception> {
         // TODO: make read lock check return an exception instead of panicking
         let depth = parent
             .read()
@@ -37,11 +37,11 @@ impl CallSnapshot {
             )
         }
 
-        Ok(Arc::new(RwLock::new(CallSnapshot {
+        Ok(Locker::new(CallSnapshot {
             parent: Some(parent.clone()),
             expression: exp.clone(),
             depth,
-        })))
+        }))
     }
 
     pub fn expression(&self) -> &'_ Expression {

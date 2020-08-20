@@ -1,23 +1,24 @@
 use std::collections::HashMap;
 
 use std::fmt;
-use std::sync::{Arc, RwLock};
+
+use crate::Locker;
 
 use crate::{
     exp, CallSnapshot, Exception, ExceptionValue as EV, Expression, Operator, Symbol, Value,
 };
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 struct ParentEnvironment {
     namespace: Option<String>,
-    environment: Arc<RwLock<Environment>>,
+    environment: Locker<Environment>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Environment {
-    values: RwLock<HashMap<Symbol, Arc<RwLock<Expression>>>>,
+    values: HashMap<Symbol, Locker<Expression>>,
     // This unreadable memory model might cause issues going forward
-    parents: RwLock<Vec<ParentEnvironment>>,
+    parents: Vec<ParentEnvironment>,
     // Whether this environment is a "shadow environment" -- that is, whether
     // it defers local assignment to the first non-namespaced parent.
     shadow: bool,
@@ -28,8 +29,8 @@ impl Environment {
 
     pub fn root() -> Self {
         Self {
-            values: RwLock::new(HashMap::new()),
-            parents: RwLock::new(vec![]),
+            values: HashMap::new(),
+            parents: vec![],
             shadow: false,
         }
     }
@@ -39,7 +40,7 @@ impl Environment {
         self
     }
 
-    pub fn with_parent(self, parent: Arc<RwLock<Self>>, namespace: Option<String>) -> Self {
+    pub fn with_parent(mut self, parent: Locker<Self>, namespace: Option<String>) -> Self {
         self.add_parent(parent, namespace);
         self
     }
@@ -91,24 +92,22 @@ impl Environment {
         &self,
         symbol: &Symbol,
         namespace: Option<String>,
-    ) -> Option<(Arc<RwLock<Expression>>, usize)> {
+    ) -> Option<(Locker<Expression>, usize)> {
         if namespace == None {
-            if let Some(value) = self.values.read().unwrap().get(&symbol) {
+            if let Some(value) = self.values.get(&symbol) {
                 return Some((value.clone(), 0));
             }
         } else {
-            for parent in self.parents.read().unwrap().iter() {
+            for parent in self.parents.iter() {
                 if namespace == parent.namespace {
                     return parent
-                        .environment
-                        .read()
-                        .unwrap()
+                        .environment.read().unwrap()
                         .resolve_symbol(symbol, None);
                 }
             }
         }
-        let mut best_match: (Option<Arc<RwLock<Expression>>>, usize) = (None, 0);
-        for parent in self.parents.read().unwrap().iter() {
+        let mut best_match: (Option<Locker<Expression>>, usize) = (None, 0);
+        for parent in self.parents.iter() {
             if parent.namespace.is_some() {
                 continue;
             }
@@ -127,7 +126,7 @@ impl Environment {
             return Some((exp, best_match.1 + 1));
         }
         match Self::get_literal(symbol) {
-            Some(value) => Some((Arc::new(RwLock::new(Expression::new(value))), 9999)),
+            Some(value) => Some((Locker::new(Expression::new(value)), 9999)),
             None => None,
         }
     }
@@ -151,7 +150,7 @@ impl Environment {
         }
     }
 
-    pub fn lookup(&self, symbol: &Symbol) -> Option<Arc<RwLock<Expression>>> {
+    pub fn lookup(&self, symbol: &Symbol) -> Option<Locker<Expression>> {
         let (namespace, identifier) = Self::extract_components(symbol);
         match self.resolve_symbol(&identifier, namespace) {
             Some((exp, _)) => Some(exp),
@@ -159,20 +158,20 @@ impl Environment {
         }
     }
 
-    pub fn add_parent(&self, parent: Arc<RwLock<Self>>, namespace: Option<String>) {
-        self.parents.write().unwrap().push(ParentEnvironment {
+    pub fn add_parent(&mut self, parent: Locker<Self>, namespace: Option<String>) {
+        self.parents.push(ParentEnvironment {
             namespace,
             environment: parent,
         });
     }
 
     pub fn assign(
-        &self,
+        &mut self,
         symbol: Symbol,
         exp: Expression,
         only_local: bool,
-        snapshot: Arc<RwLock<CallSnapshot>>,
-    ) -> Result<Arc<RwLock<Expression>>, Exception> {
+        snapshot: Locker<CallSnapshot>,
+    ) -> Result<Locker<Expression>, Exception> {
         let (namespace, identifier) = Self::extract_components(&symbol);
 
         if only_local && namespace.is_some() {
@@ -185,17 +184,15 @@ impl Environment {
 
         if !self.shadow
             && (only_local
-                || self.values.read().unwrap().contains_key(&identifier)
-                || self.parents.read().unwrap().is_empty())
+                || self.values.contains_key(&identifier)
+                || self.parents.is_empty())
         {
-            let lock = Arc::new(RwLock::new(exp));
+            let lock = Locker::new(exp);
             self.values
-                .write()
-                .unwrap()
                 .insert(identifier, lock.clone());
             Ok(lock)
         } else {
-            for parent in self.parents.read().unwrap().iter() {
+            for parent in self.parents.iter() {
                 if parent.namespace == namespace {
                     return parent
                         .environment
@@ -217,17 +214,13 @@ impl fmt::Display for Environment {
         write!(
             f,
             "[values: {}]\n{}\nimported namespaces: {}",
-            self.values.read().unwrap().len(),
+            self.values.len(),
             self.values
-                .read()
-                .unwrap()
                 .iter()
                 .map(|(k, v)| format!("{} := {}", k, v.read().unwrap()))
                 .collect::<Vec<String>>()
                 .join("\n"),
             self.parents
-                .read()
-                .unwrap()
                 .iter()
                 .map(|p| match &p.namespace {
                     Some(val) => val.clone(),

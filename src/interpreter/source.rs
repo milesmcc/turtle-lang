@@ -2,7 +2,8 @@ use crate::parser::Rule;
 use ansi_term::{Color, Style};
 use pest::iterators::Pair;
 use std::fmt;
-use std::sync::{Arc, RwLock};
+
+use crate::Locker;
 
 #[derive(Debug, Clone)]
 pub struct Source {
@@ -20,11 +21,11 @@ impl Source {
 pub struct SourcePosition {
     start_pos: usize,
     end_pos: usize,
-    text: Arc<RwLock<Source>>,
+    text: Locker<Source>,
 }
 
 impl SourcePosition {
-    pub fn new(start_pos: usize, end_pos: usize, text: Arc<RwLock<Source>>) -> Self {
+    pub fn new(start_pos: usize, end_pos: usize, text: Locker<Source>) -> Self {
         Self {
             start_pos,
             end_pos,
@@ -32,7 +33,7 @@ impl SourcePosition {
         }
     }
 
-    pub fn from_pair(pair: &Pair<'_, Rule>, source: &Arc<RwLock<Source>>) -> Self {
+    pub fn from_pair(pair: &Pair<'_, Rule>, source: &Locker<Source>) -> Self {
         Self::new(
             pair.as_span().start_pos().pos(),
             pair.as_span().end_pos().pos(),

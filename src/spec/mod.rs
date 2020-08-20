@@ -1,8 +1,9 @@
 use crate::{parse, CallSnapshot, Environment, Exception, Expression};
-use std::sync::{Arc, RwLock};
+
+use crate::Locker;
 
 fn exec(code: &str) -> Result<Expression, Exception> {
-    let root = Arc::new(RwLock::new(Environment::root()));
+    let root = Locker::new(Environment::root());
     let expressions = parse(code, "<test module>")?;
     let mut ret = Expression::nil();
     for expression in expressions {

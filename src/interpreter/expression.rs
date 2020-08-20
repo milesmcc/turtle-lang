@@ -1,6 +1,7 @@
 use std::fmt;
 use std::sync::mpsc;
-use std::sync::{Arc, RwLock};
+
+use crate::Locker;
 use std::thread;
 
 use crate::{
@@ -62,8 +63,8 @@ impl Expression {
 
     pub fn eval_async(
         self,
-        parent_snapshot: Arc<RwLock<CallSnapshot>>,
-        env: Arc<RwLock<Environment>>,
+        parent_snapshot: Locker<CallSnapshot>,
+        env: Locker<Environment>,
     ) -> Result<mpsc::Receiver<Result<Self, Exception>>, Exception> {
         let exp = self;
         let snap = parent_snapshot.clone();
@@ -91,8 +92,8 @@ impl Expression {
 
     pub fn eval(
         &self,
-        parent_snapshot: Arc<RwLock<CallSnapshot>>,
-        env: Arc<RwLock<Environment>>,
+        parent_snapshot: Locker<CallSnapshot>,
+        env: Locker<Environment>,
     ) -> Result<Self, Exception> {
         use Value::*;
 
@@ -120,7 +121,7 @@ impl Expression {
                                 Lambda(_) => Environment::root()
                                     .with_parent(function.lexical_scope.clone(), None),
                                 Macro(_) => {
-                                    let env =
+                                    let mut env =
                                         Environment::root().with_parent(env.clone(), None);
                                     env.add_parent(function.lexical_scope.clone(), None);
                                     env
@@ -167,7 +168,7 @@ impl Expression {
                                 scoped_env = scoped_env.shadow();
                             };
                             let mut result = Expression::nil();
-                            let scoped_env_lock = Arc::new(RwLock::new(scoped_env));
+                            let scoped_env_lock = Locker::new(scoped_env);
                             for exp in &function.expressions {
                                 result = exp.eval(snap(), scoped_env_lock.clone())?;
                             }

@@ -5,13 +5,14 @@ use relative_path::RelativePath;
 use std::env;
 use std::fs;
 use std::path::PathBuf;
-use std::sync::{Arc, RwLock};
+
+use crate::Locker;
 
 pub fn resolve_resource(
     path: &str,
-    snapshot: Arc<RwLock<CallSnapshot>>,
+    snapshot: Locker<CallSnapshot>,
     via: &Expression,
-    env: Arc<RwLock<Environment>>,
+    env: Locker<Environment>,
 ) -> Result<Expression, Exception> {
     let content = match path.starts_with('@') {
         true => match stdlib::get_std_resource(path) {

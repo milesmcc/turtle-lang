@@ -4,7 +4,8 @@ use crate::{
 use ansi_term::{Color, Style};
 use std::error::Error;
 use std::fmt;
-use std::sync::{Arc, RwLock};
+
+use crate::Locker;
 
 #[macro_export]
 macro_rules! exp {
@@ -84,7 +85,7 @@ impl ExceptionValue {
     pub fn into_expression(self) -> Expression {
         use ExceptionValue::*;
 
-        let _root_env = Arc::new(RwLock::new(Environment::root()));
+        let _root_env = Locker::new(Environment::root());
 
         match self {
             Other(expression) => expression,
@@ -124,7 +125,7 @@ impl fmt::Display for ExceptionValue {
 #[derive(Debug, Clone)]
 pub struct Exception {
     value: ExceptionValue,
-    snapshot: Option<Arc<RwLock<CallSnapshot>>>,
+    snapshot: Option<Locker<CallSnapshot>>,
     additional_sources: Vec<SourcePosition>,
     note: Option<String>,
 }
@@ -132,7 +133,7 @@ pub struct Exception {
 impl Exception {
     pub fn new(
         value: ExceptionValue,
-        snapshot: Option<Arc<RwLock<CallSnapshot>>>,
+        snapshot: Option<Locker<CallSnapshot>>,
         note: Option<String>,
     ) -> Self {
         Exception {

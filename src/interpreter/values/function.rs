@@ -1,13 +1,14 @@
 use crate::{Environment, Expression, Symbol};
 use std::cmp::Ordering;
-use std::sync::{Arc, RwLock};
+
+use crate::Locker;
 
 #[derive(Debug, Clone)]
 pub struct Function {
     pub params: Vec<Symbol>,
     pub expressions: Vec<Expression>,
     pub collapse_input: bool,
-    pub lexical_scope: Arc<RwLock<Environment>>,
+    pub lexical_scope: Locker<Environment>,
 }
 
 impl PartialEq for Function {
@@ -33,7 +34,7 @@ impl Function {
         params: Vec<Symbol>,
         expressions: Vec<Expression>,
         collapse_input: bool,
-        lexical_scope: Arc<RwLock<Environment>>,
+        lexical_scope: Locker<Environment>,
     ) -> Self {
         Self {
             params,

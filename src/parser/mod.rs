@@ -4,17 +4,18 @@ use crate::{
 };
 use pest::iterators::Pair;
 use pest::Parser;
-use std::sync::{Arc, RwLock};
+
+use crate::Locker;
 
 #[derive(Parser)]
 #[grammar = "parser/syntax.pest"]
 pub struct SyntaxParser;
 
 pub fn parse(code: &str, location: &str) -> Result<Vec<Expression>, Exception> {
-    let source = Arc::new(RwLock::new(Source::new(
+    let source = Locker::new(Source::new(
         String::from(code),
         String::from(location),
-    )));
+    ));
 
     match SyntaxParser::parse(Rule::expressions, code) {
         Ok(pairs) => {
@@ -37,7 +38,7 @@ pub fn parse(code: &str, location: &str) -> Result<Vec<Expression>, Exception> {
 
 fn build_expression(
     pair: Pair<'_, Rule>,
-    source: Arc<RwLock<Source>>,
+    source: Locker<Source>,
 ) -> Result<Expression, Exception> {
     let pos = SourcePosition::new(
         pair.as_span().start_pos().pos(),

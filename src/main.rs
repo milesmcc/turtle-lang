@@ -1,6 +1,6 @@
 use std::fs;
 
-use std::sync::{Arc, RwLock};
+
 
 extern crate ansi_term;
 extern crate pest;
@@ -13,6 +13,7 @@ extern crate regex;
 extern crate relative_path;
 extern crate rand;
 
+pub mod util;
 pub mod interpreter;
 pub mod parser;
 pub mod repl;
@@ -27,6 +28,7 @@ pub use interpreter::resolver::resolve_resource;
 pub use interpreter::source::{Source, SourcePosition};
 pub use interpreter::values::{Function, Keyword, Operator, Symbol, Value};
 pub use parser::parse;
+pub use util::Locker;
 
 use clap::{App, Arg};
 
@@ -56,7 +58,7 @@ fn main() {
                 .index(1),
         )
         .get_matches();
-    let env = Arc::new(RwLock::new(Environment::root()));
+    let env = Locker::new(Environment::root());
 
     if !matches.is_present("NO_PRELUDE") {
         match parse("(import \"@prelude\")", "<builtin>") {
