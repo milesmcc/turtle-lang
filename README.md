@@ -38,7 +38,7 @@ You can install Turtle using [Cargo](crates.io) by running `cargo install turtle
 
 Having helpful error messages is a priority for Turtle. Here's an example type mismatch error stacktrace:
 
-<img src="examples/simple_error.png" width="250" align="center" alt="An example Turtle stacktrace">
+<img src="examples/simple_error.png" width="350" alt="An example Turtle stacktrace">
 
 ##### Fizz Buzz (Crackle Pop)
 
