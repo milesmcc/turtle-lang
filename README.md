@@ -2,11 +2,23 @@
 
 Turtle is a humble, fun, and friendly Lisp. You can [install it](#install) using Cargo, browse some [example code](#examples), or follow the (currently unwritten) [tutorial](TUTORIAL.md).
 
+```lisp
+;; Print "Hello, world!" to the terminal:
+(disp "Hello, world!")
+
+;; Let's print the squares of the numbers 1 through 10 using Turtle.
+(func square (n) (exp n 2))
+(disp (map square (range 10)))
+
+;; We can also do this using anonymous functions (lambdas):
+(disp (map (lambda '(n) '(exp n 2)) (range 10)))
+```
+
 ## Motivation
 
 There are a lot of programming languages out there, and most aren't suitable for any real-world use---they are _toy programming languages_. Turtle is no exception: it exists because I wanted to experiment with Lisp without having to deal with the nuances of the most popular implementations (Common Lisp, Clojure, Scheme, etc).
 
-Turtle has no IO facilities, and it's not particularly fast. However, it's ruthlessly simple, memory efficient, thread safe (well, at least it will be once I implement a way to spawn threads), and is well-suited for self-contained programming and math challenges (like Project Euler).
+Turtle has no IO facilities, and it's not particularly fast. However, it's ruthlessly simple, memory efficient, thread safe (well, at least it will be once I implement a way to spawn threads), and is well-suited for self-contained programming and math challenges (like Project Euler). Turtle is suitable for both functional and imperative programming, and---like any good Lisp---has strong macro and metaprogramming support. 
 
 ## Install
 
