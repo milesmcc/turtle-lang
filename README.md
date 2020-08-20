@@ -18,7 +18,7 @@ Turtle is a humble, fun, and friendly Lisp. You can [install it](#install) using
 
 There are a lot of programming languages out there, and most aren't suitable for any real-world use---they are _toy programming languages_. Turtle is no exception: it exists because I wanted to experiment with Lisp without having to deal with the nuances of the most popular implementations (Common Lisp, Clojure, Scheme, etc).
 
-Turtle has no IO facilities, and it's not particularly fast. However, it's ruthlessly simple, memory efficient, thread safe (well, at least it will be once I implement a way to spawn threads), and is well-suited for self-contained programming and math challenges (like Project Euler). Turtle is suitable for both functional and imperative programming, and---like any good Lisp---has strong macro and metaprogramming support.
+Turtle has no IO facilities, and it's not particularly fast. However, it's ruthlessly simple, memory efficient, thread safe (well, at least it will be once I implement a way to spawn threads), and is great for self-contained programming and math challenges (like Project Euler). Turtle is suitable for both functional and imperative programming, and---like any good Lisp---has strong macro and metaprogramming support.
 
 Turtle is inspired by Haskell, Rust, Scheme, Common Lisp, Python, and Ruby. The interpreter is written in Rust, but most of the language's features are written in Turtle itself.
 
@@ -33,6 +33,12 @@ You can install Turtle using [Cargo](crates.io) by running `cargo install turtle
 ```lisp
 (disp "Hello, world!")
 ```
+
+##### Error
+
+Having helpful error messages is a priority for Turtle. Here's an example type mismatch error stacktrace:
+
+![Example error stacktrace](examples/simple_error.png)
 
 ##### Fizz Buzz (Crackle Pop)
 
