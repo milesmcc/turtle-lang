@@ -3,7 +3,6 @@ use crate::{
     ExceptionValue as EV, Expression, Value,
 };
 use regex::Regex;
-use std::convert::TryFrom;
 use std::fmt;
 
 use crate::Locker;
