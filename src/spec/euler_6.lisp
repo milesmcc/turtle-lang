@@ -3,10 +3,13 @@
 (import "@prelude")
 (import "@math")
 
-(letq sum-of-squares ,(cons sum (map (lambda '(x) '(exp x 2)) (range 100))))
-(letq square-of-sum (exp ,(cons sum (range 100)) 2))
-(letq answer (- square-of-sum sum-of-squares))
+(letq sum-of-squares 
+    (apply sum
+        (map square (range 100))))
 
-(disp answer)
+(letq square-of-sum
+    (square (apply sum (range 100))))
+
+(letq answer (- square-of-sum sum-of-squares))
 
 (assert (eq answer 25164150))

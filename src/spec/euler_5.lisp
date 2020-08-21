@@ -9,11 +9,11 @@
 
 (letq factors '(20 19 18 17 16 15 14 13 12 11))
 
-(letq interval ,(append '(* 20) (filter is-prime factors)))
+(letq interval (* 20 (apply * (filter is-prime factors))))
 
 (letq i interval)
 (while
-    (not ,(cons and (map (lambda '(x) '(eq (modulo i x) 0)) factors)))
+    (not (apply and (map (lambda '(x) '(eq (modulo i x) 0)) factors)))
     (letq i (+ i interval)))
 
 (assert (eq i 232792560))
