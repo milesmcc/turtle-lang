@@ -67,4 +67,9 @@ mod tests {
     fn euler_4() {
         assert!(check(include_str!("euler_4.lisp")).is_ok());
     }
+
+    #[test]
+    fn euler_5() {
+        assert!(check(include_str!("euler_5.lisp")).is_ok());
+    }
 }
