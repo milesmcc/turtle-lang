@@ -3,6 +3,7 @@ use crate::{
     ExceptionValue as EV, Expression, Value,
 };
 use regex::Regex;
+use std::convert::TryFrom;
 use std::fmt;
 
 use crate::Locker;
@@ -42,6 +43,7 @@ pub enum Operator {
     Floor,
     Rand,
     Equiv,
+    Nth,
 }
 
 impl fmt::Display for Operator {
@@ -80,7 +82,13 @@ impl Operator {
                     EV::ArgumentMismatch(arguments.len(), "1".to_string()),
                     snapshot
                 );
-                match &*arguments.get(0).unwrap().eval(snapshot, env)?.value().read()? {
+                match &*arguments
+                    .get(0)
+                    .unwrap()
+                    .eval(snapshot, env)?
+                    .value()
+                    .read()?
+                {
                     Value::List(_) => Ok(Expression::new(Value::List(vec![]))),
                     _ => Ok(Expression::new(Value::True)),
                 }
@@ -147,9 +155,9 @@ impl Operator {
                 );
                 let list = arguments.get(0).unwrap().eval(snap(), env)?;
                 match &*list.value().read()? {
-                    Value::List(vals) => {
-                        Ok(Expression::new(Value::List(vals.iter().skip(1).cloned().collect())))
-                    }
+                    Value::List(vals) => Ok(Expression::new(Value::List(
+                        vals.iter().skip(1).cloned().collect(),
+                    ))),
                     val => exp!(
                         EV::InvalidArgument,
                         snap(),
@@ -272,10 +280,7 @@ impl Operator {
                     EV::ArgumentMismatch(arguments.len(), "2".to_string()),
                     snap()
                 );
-                let base = arguments
-                    .get(0)
-                    .unwrap()
-                    .eval(snap(), env.clone())?;
+                let base = arguments.get(0).unwrap().eval(snap(), env.clone())?;
                 let exp = arguments.get(1).unwrap().eval(snap(), env)?;
                 match (&*base.value().read()?, &*exp.value().read()?) {
                     (Number(base), Number(exp)) => {
@@ -297,10 +302,7 @@ impl Operator {
                     EV::ArgumentMismatch(arguments.len(), "2".to_string()),
                     snap()
                 );
-                let val = arguments
-                    .get(0)
-                    .unwrap()
-                    .eval(snap(), env.clone())?;
+                let val = arguments.get(0).unwrap().eval(snap(), env.clone())?;
                 let modu = arguments.get(1).unwrap().eval(snap(), env)?;
                 match (&*val.value().read()?, &*modu.value().read()?) {
                     (Number(first), Number(second)) => {
@@ -355,7 +357,8 @@ impl Operator {
                     .get(0)
                     .unwrap()
                     .eval(snap(), env)?
-                    .value().read()?
+                    .value()
+                    .read()?
                     .as_type();
                 Ok(Expression::new(arg_type))
             }
@@ -445,7 +448,8 @@ impl Operator {
                     .get(0)
                     .unwrap()
                     .eval(snap(), env.clone())?
-                    .value().read()?
+                    .value()
+                    .read()?
                 {
                     Value::List(vals) => {
                         collapse_input = false;
@@ -544,7 +548,8 @@ impl Operator {
                     .get(0)
                     .unwrap()
                     .eval(snap(), env.clone())?
-                    .value().read()?
+                    .value()
+                    .read()?
                 {
                     Text(value) => value.clone(),
                     other => return Ok(Expression::new(Value::Text(format!("{}", other)))),
@@ -597,7 +602,13 @@ impl Operator {
                     EV::ArgumentMismatch(arguments.len(), "1".to_string()),
                     snapshot
                 );
-                match &*arguments.get(0).unwrap().eval(snap(), env)?.value().read()? {
+                match &*arguments
+                    .get(0)
+                    .unwrap()
+                    .eval(snap(), env)?
+                    .value()
+                    .read()?
+                {
                     Value::List(vals) => Ok(Expression::new(Value::Number(vals.len() as f64))),
                     other => exp!(
                         EV::InvalidArgument,
@@ -654,7 +665,8 @@ impl Operator {
                     .get(0)
                     .unwrap()
                     .eval(snap(), env.clone())?
-                    .value().read()?
+                    .value()
+                    .read()?
                 {
                     Number(val) => Ok(Expression::new(Value::Number(val.floor()))),
                     val => exp!(
@@ -684,7 +696,54 @@ impl Operator {
                         return Ok(Expression::nil());
                     }
                 }
-                return Ok(Expression::t());
+                Ok(Expression::t())
+            }
+            Nth => {
+                exp_assert!(
+                    arguments.len() == 2,
+                    EV::ArgumentMismatch(arguments.len(), "2".to_string()),
+                    snapshot
+                );
+                let index = match &*arguments
+                    .get(0)
+                    .unwrap()
+                    .eval(snap(), env.clone())?
+                    .value()
+                    .read()?
+                {
+                    Number(n) => *n as usize,
+                    val => exp!(
+                        EV::InvalidArgument,
+                        snapshot,
+                        format!(
+                            "the first argument of `nth` must be a number (got `{}`)",
+                            val
+                        )
+                    ),
+                };
+                let list_exp = arguments.get(1).unwrap().eval(snap(), env.clone())?;
+                match &*list_exp.value().read()? {
+                    Value::List(v) => match v.get(index) {
+                        Some(v) => Ok(v.clone()),
+                        None => exp!(
+                            EV::InvalidArgument,
+                            snapshot,
+                            format!(
+                                "the list has only {} elements, so the index {} doesn't exist",
+                                v.len(),
+                                index
+                            )
+                        ),
+                    },
+                    val => exp!(
+                        EV::InvalidArgument,
+                        snapshot,
+                        format!(
+                            "the first argument of `nth` must be a number (got `{}`)",
+                            val
+                        )
+                    ),
+                }
             }
         }
     }

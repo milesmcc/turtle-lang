@@ -84,6 +84,7 @@ impl Environment {
             "floor" => Some(Value::Operator(Floor)),
             "rand" => Some(Value::Operator(Rand)),
             "equiv" => Some(Value::Operator(Equiv)),
+            "nth" => Some(Value::Operator(Nth)),
             _ => None,
         }
     }

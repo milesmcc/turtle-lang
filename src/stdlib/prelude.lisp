@@ -23,11 +23,6 @@
                 (drop 
                     (sum n -1) 
                     (tail xs))))))
-(export 'nth 
-    (lambda '
-        (n xs) '
-        (car 
-            (drop n xs))))
 (export 'head car)
 (export 'tail cdr)
 (export 'first 
