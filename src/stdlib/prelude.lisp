@@ -220,17 +220,14 @@
                     (eq k val)) lst))))
 (func map 
     (function args) 
-    (cond 
-        (
-            (eq args 
-                ()) 
-            ()) 
-        ('t 
-            (cons 
-                (function 
-                    (first args)) 
-                (map function 
-                    (tail args))))))
+    (do
+        (letq res ())
+        (letq i (- (length args) 1))
+        (while (ge 0 i)
+            (do
+                (letq res (cons (function (nth i args)) res))
+                (-- i)))
+        res))
 (func push 
     (lst val) 
     (append lst 
