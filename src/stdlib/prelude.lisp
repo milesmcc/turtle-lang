@@ -264,5 +264,9 @@
                 (-- n)))
         nums))
 
+;; Utils
+(func apply (n lst)
+    ,(cons n lst))
+
 ;; Fun
 (setq zen "The Zen of Turtle (to be written...)")
