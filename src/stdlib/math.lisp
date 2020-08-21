@@ -130,3 +130,4 @@
                 (push! factors trying)
                 (let 'curr (/ curr trying))))
      factors))
+(func square (n) (exp n 2))
