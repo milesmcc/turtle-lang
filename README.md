@@ -1,6 +1,6 @@
 # The Turtle Programming Language
 
-Turtle is a humble, fun, and friendly Lisp. I built it as an exercise, and it's not meant to be taken seriously. Still, you can [install it](#install) using Cargo, or browse some [example code](#examples).
+Turtle is a humble, fun, and friendly Lisp. I built it as an exercise. It's my first attempt at building a programming language, and I plan to make a more serious attempt sometime in the future. Still, you can [install it](#install) using Cargo, or browse some [example code](#examples).
 
 ```lisp
 ;; Print "Hello, world!" to the terminal:
