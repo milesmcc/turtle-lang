@@ -1,6 +1,6 @@
 use std::fmt;
 use std::sync::mpsc;
-
+use std::sync::RwLockReadGuard;
 use crate::Locker;
 use std::thread;
 
@@ -11,21 +11,21 @@ use crate::{
 
 #[derive(Debug, Clone)]
 pub struct Expression {
-    value: Value,
+    value: Locker<Value>,
     source: Option<SourcePosition>,
 }
 
 impl PartialEq for Expression {
     fn eq(&self, other: &Self) -> bool {
         // TODO: do we need to check whether the environments are the same?
-        self.value == other.value
+        self.value.read().unwrap().eq(&other.value.read().unwrap())
     }
 }
 
 impl Expression {
     pub fn new(value: Value) -> Self {
         Self {
-            value,
+            value: Locker::new(value),
             source: None,
         }
     }
@@ -36,24 +36,18 @@ impl Expression {
     }
 
     pub fn nil() -> Self {
-        Self {
-            value: Value::List(vec![]),
-            source: None,
-        }
+        Self::new(Value::List(vec![]))
     }
 
     pub fn t() -> Self {
-        Self {
-            value: Value::True,
-            source: None,
-        }
+        Self::new(Value::True)
     }
 
-    pub fn get_value(&self) -> &Value {
-        &self.value
+    pub fn value(&self) -> Value {
+        self.value.read().unwrap().clone()
     }
 
-    pub fn into_value(self) -> Value {
+    pub fn into_value(self) -> Locker<Value> {
         self.value
     }
 
@@ -101,12 +95,12 @@ impl Expression {
 
         let snap = || snapshot.clone();
 
-        match &self.value {
+        match &*self.value.read().unwrap() {
             List(vals) => {
                 if !vals.is_empty() {
                     let operator = vals.get(0).unwrap();
                     let arguments: Vec<&Expression> = vals.iter().skip(1).collect();
-                    match &operator.value {
+                    match &*operator.value.read().unwrap() {
                         Operator(operand) => operand.apply(snapshot, arguments, self, env),
                         List(_) | Symbol(_) => {
                             let evaled_operator = operator.eval(snap(), env.clone())?;
@@ -117,7 +111,7 @@ impl Expression {
                             Expression::new(Value::List(new_list)).eval(snap(), env)
                         }
                         Lambda(function) | Macro(function) => {
-                            let mut scoped_env = match &operator.value {
+                            let mut scoped_env = match *operator.value.read().unwrap() {
                                 Lambda(_) => Environment::root()
                                     .with_parent(function.lexical_scope.clone(), None),
                                 Macro(_) => {
@@ -134,7 +128,7 @@ impl Expression {
                                 let args_evaled = {
                                     let mut list = Vec::new();
                                     for arg_expr in arguments {
-                                        list.push(match &operator.value {
+                                        list.push(match *operator.value.read().unwrap() {
                                             Lambda { .. } => arg_expr.eval(snap(), env.clone())?,
                                             Macro { .. } => arg_expr.clone(),
                                             _ => unreachable!(),
@@ -156,7 +150,7 @@ impl Expression {
                                 for (symbol, arg_expr) in
                                     function.params.iter().zip(arguments.into_iter())
                                 {
-                                    let arg_evaled = match &operator.value {
+                                    let arg_evaled = match *operator.value.read().unwrap() {
                                         Lambda { .. } => arg_expr.eval(snap(), env.clone())?,
                                         Macro { .. } => arg_expr.clone(),
                                         _ => unreachable!(),
@@ -164,7 +158,7 @@ impl Expression {
                                     scoped_env.assign(symbol.clone(), arg_evaled, true, snap())?;
                                 }
                             }
-                            if let Macro { .. } = &operator.value {
+                            if let Macro { .. } = *operator.value.read().unwrap() {
                                 scoped_env = scoped_env.shadow();
                             };
                             let mut result = Expression::nil();
@@ -195,12 +189,12 @@ impl Expression {
 
 impl fmt::Display for Expression {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", self.value)
+        write!(f, "{}", self.value.read().unwrap())
     }
 }
 
 impl PartialOrd for Expression {
     fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
-        self.value.partial_cmp(&other.value)
+        self.value.read().unwrap().partial_cmp(&other.value.read().unwrap())
     }
 }
