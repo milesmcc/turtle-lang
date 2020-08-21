@@ -1,6 +1,6 @@
 use std::fmt;
 use std::sync::mpsc;
-use std::sync::RwLockReadGuard;
+
 use crate::Locker;
 use std::thread;
 
