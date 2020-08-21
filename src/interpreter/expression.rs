@@ -43,8 +43,8 @@ impl Expression {
         Self::new(Value::True)
     }
 
-    pub fn value(&self) -> Value {
-        self.value.read().unwrap().clone()
+    pub fn value(&self) -> Locker<Value> {
+        self.value.clone()
     }
 
     pub fn into_value(self) -> Locker<Value> {

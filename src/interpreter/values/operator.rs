@@ -80,7 +80,7 @@ impl Operator {
                     EV::ArgumentMismatch(arguments.len(), "1".to_string()),
                     snapshot
                 );
-                match arguments.get(0).unwrap().eval(snapshot, env)?.value() {
+                match &*arguments.get(0).unwrap().eval(snapshot, env)?.value().read()? {
                     Value::List(_) => Ok(Expression::new(Value::List(vec![]))),
                     _ => Ok(Expression::new(Value::True)),
                 }
@@ -97,7 +97,7 @@ impl Operator {
                     let evaled = argument.eval(snap(), env.clone())?;
                     match &prev {
                         None => prev = Some(evaled),
-                        Some(val) => match (evaled.value(), val.value()) {
+                        Some(val) => match (&*evaled.value().read()?, &*val.value().read()?) {
                             (Value::List(l1), Value::List(l2)) => {
                                 if !(l1.is_empty() && l2.is_empty()) {
                                     return Ok(Expression::nil());
@@ -122,15 +122,15 @@ impl Operator {
 
                 let list = arguments.get(0).unwrap().eval(snap(), env)?;
 
-                match list.value() {
-                    Value::List(mut vals) => {
+                match &*list.value().read()? {
+                    Value::List(vals) => {
                         exp_assert!(
                             !vals.is_empty(),
                             EV::InvalidArgument,
                             snap(),
                             "cannot `car` an empty list (nil)".to_string()
                         );
-                        Ok(vals.remove(0))
+                        Ok(vals.get(0).unwrap().clone())
                     }
                     val => exp!(
                         EV::InvalidArgument,
@@ -146,12 +146,9 @@ impl Operator {
                     snap()
                 );
                 let list = arguments.get(0).unwrap().eval(snap(), env)?;
-                match list.value() {
-                    Value::List(mut vals) => {
-                        if !vals.is_empty() {
-                            vals.remove(0);
-                        }
-                        Ok(Expression::new(Value::List(vals)))
+                match &*list.value().read()? {
+                    Value::List(vals) => {
+                        Ok(Expression::new(Value::List(vals.iter().skip(1).cloned().collect())))
                     }
                     val => exp!(
                         EV::InvalidArgument,
@@ -168,10 +165,12 @@ impl Operator {
                 );
                 let first = arguments.get(0).unwrap().eval(snap(), env.clone())?;
                 let list = arguments.get(1).unwrap().eval(snap(), env)?;
-                match list.value() {
-                    Value::List(mut vals) => {
-                        vals.insert(0, first);
-                        Ok(Expression::new(Value::List(vals)))
+                match &*list.value().read()? {
+                    Value::List(vals) => {
+                        // TODO: do this without clone
+                        let mut new_list = vals.clone();
+                        new_list.insert(0, first);
+                        Ok(Expression::new(Value::List(new_list)))
                     }
                     val => exp!(
                         EV::InvalidArgument,
@@ -185,7 +184,7 @@ impl Operator {
             }
             Cond => {
                 for argument in &arguments {
-                    match argument.value() {
+                    match &*argument.value().read()? {
                         Value::List(elems) => {
                             exp_assert!(
                                 elems.len() == 2,
@@ -218,8 +217,8 @@ impl Operator {
                     snap()
                 );
                 let sym_exp = arguments.get(0).unwrap().eval(snap(), env.clone())?;
-                let symbol = match sym_exp.value() {
-                    Symbol(sym) => sym,
+                let symbol = match &*sym_exp.value().read()? {
+                    Symbol(sym) => sym.clone(),
                     other => exp!(
                         EV::InvalidArgument,
                         snap(),
@@ -242,7 +241,7 @@ impl Operator {
             Sum => {
                 let mut sum = 0.0;
                 for arg in arguments {
-                    match arg.eval(snap(), env.clone())?.value() {
+                    match &*arg.eval(snap(), env.clone())?.value().read()? {
                         Number(val) => sum += val,
                         val => exp!(
                             EV::InvalidArgument,
@@ -256,7 +255,7 @@ impl Operator {
             Prod => {
                 let mut prod = 1.0;
                 for arg in arguments {
-                    match arg.eval(snap(), env.clone())?.value() {
+                    match &*arg.eval(snap(), env.clone())?.value().read()? {
                         Number(val) => prod *= val,
                         val => exp!(
                             EV::InvalidArgument,
@@ -276,12 +275,11 @@ impl Operator {
                 let base = arguments
                     .get(0)
                     .unwrap()
-                    .eval(snap(), env.clone())?
-                    .value();
-                let exp = arguments.get(1).unwrap().eval(snap(), env)?.value();
-                match (base, exp) {
+                    .eval(snap(), env.clone())?;
+                let exp = arguments.get(1).unwrap().eval(snap(), env)?;
+                match (&*base.value().read()?, &*exp.value().read()?) {
                     (Number(base), Number(exp)) => {
-                        Ok(Expression::new(Value::Number(base.powf(exp))))
+                        Ok(Expression::new(Value::Number(base.powf(*exp))))
                     }
                     (base, exp) => exp!(
                         EV::InvalidArgument,
@@ -302,10 +300,9 @@ impl Operator {
                 let val = arguments
                     .get(0)
                     .unwrap()
-                    .eval(snap(), env.clone())?
-                    .value();
-                let modu = arguments.get(1).unwrap().eval(snap(), env)?.value();
-                match (val, modu) {
+                    .eval(snap(), env.clone())?;
+                let modu = arguments.get(1).unwrap().eval(snap(), env)?;
+                match (&*val.value().read()?, &*modu.value().read()?) {
                     (Number(first), Number(second)) => {
                         Ok(Expression::new(Value::Number(first % second)))
                     }
@@ -358,7 +355,7 @@ impl Operator {
                     .get(0)
                     .unwrap()
                     .eval(snap(), env)?
-                    .value()
+                    .value().read()?
                     .as_type();
                 Ok(Expression::new(arg_type))
             }
@@ -375,8 +372,9 @@ impl Operator {
                         snapshot
                     );
                 }
-                let path = match arguments.get(0).unwrap().eval(snap(), env.clone())?.value() {
-                    Text(val) => val,
+                let res = arguments.get(0).unwrap().eval(snap(), env.clone())?;
+                let path = match &*res.value().read()? {
+                    Text(val) => val.clone(),
                     val => exp!(
                         EV::InvalidArgument,
                         snapshot,
@@ -388,7 +386,7 @@ impl Operator {
                 };
 
                 let namespace = match arguments.get(1) {
-                    Some(val) => match val.eval(snap(), env.clone())?.value() {
+                    Some(val) => match &*val.eval(snap(), env.clone())?.value().read()? {
                         Keyword(val) => Some(val.string_value().clone()),
                         val => exp!(
                             EV::InvalidArgument,
@@ -443,17 +441,17 @@ impl Operator {
                 );
 
                 let mut collapse_input = true;
-                let func_args = match arguments
+                let func_args = match &*arguments
                     .get(0)
                     .unwrap()
                     .eval(snap(), env.clone())?
-                    .value()
+                    .value().read()?
                 {
                     Value::List(vals) => {
                         collapse_input = false;
                         let mut symbols = Vec::new();
                         for val in vals {
-                            match val.value() {
+                            match &*val.value().read()? {
                                 Value::Symbol(sym) => symbols.push(sym.clone()),
                                 other => exp!(EV::InvalidArgument, snapshot, format!("each item in the first argument (a list) must be a symbol (got `{}`)", other)),
                             }
@@ -513,7 +511,7 @@ impl Operator {
                     Ok(exp) => Ok(exp),
                     Err(err) => {
                         // TODO: remove extra clone
-                        match catch_func.value() {
+                        match &*catch_func.value().read()? {
                             Value::Lambda{..} => Expression::new(Value::List(vec![catch_func.clone(), err.into_value().into_expression()])).eval(snapshot, Locker::new(Environment::root().with_parent(env, None))),
                             _ => exp!(
                                 EV::InvalidArgument,
@@ -542,11 +540,11 @@ impl Operator {
                     EV::ArgumentMismatch(arguments.len(), "1+".to_string()),
                     snapshot
                 );
-                let mut literal = match arguments
+                let mut literal = match &*arguments
                     .get(0)
                     .unwrap()
                     .eval(snap(), env.clone())?
-                    .value()
+                    .value().read()?
                 {
                     Text(value) => value.clone(),
                     other => return Ok(Expression::new(Value::Text(format!("{}", other)))),
@@ -572,8 +570,9 @@ impl Operator {
                     EV::ArgumentMismatch(arguments.len(), "1".to_string()),
                     snapshot
                 );
-                let value_str = match arguments.get(0).unwrap().eval(snap(), env)?.value() {
-                    Text(value) => value,
+                let val = arguments.get(0).unwrap().eval(snap(), env)?;
+                let value_str = match &*val.value().read()? {
+                    Text(value) => value.clone(),
                     other => exp!(
                         EV::InvalidArgument,
                         snapshot,
@@ -598,7 +597,7 @@ impl Operator {
                     EV::ArgumentMismatch(arguments.len(), "1".to_string()),
                     snapshot
                 );
-                match arguments.get(0).unwrap().eval(snap(), env)?.value() {
+                match &*arguments.get(0).unwrap().eval(snap(), env)?.value().read()? {
                     Value::List(vals) => Ok(Expression::new(Value::Number(vals.len() as f64))),
                     other => exp!(
                         EV::InvalidArgument,
@@ -618,7 +617,7 @@ impl Operator {
                 );
                 let mut new_list: Vec<Expression> = Vec::with_capacity(arguments.len());
                 for argument in arguments {
-                    match argument.eval(snap(), env.clone())?.value() {
+                    match &*argument.eval(snap(), env.clone())?.value().read()? {
                         Value::List(values) => new_list.extend(values.clone()),
                         other => exp!(
                             EV::InvalidArgument,
@@ -651,11 +650,11 @@ impl Operator {
                     EV::ArgumentMismatch(arguments.len(), "1".to_string()),
                     snapshot
                 );
-                match arguments
+                match &*arguments
                     .get(0)
                     .unwrap()
                     .eval(snap(), env.clone())?
-                    .value()
+                    .value().read()?
                 {
                     Number(val) => Ok(Expression::new(Value::Number(val.floor()))),
                     val => exp!(
